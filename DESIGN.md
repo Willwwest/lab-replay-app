@@ -6,21 +6,21 @@ The app is organized around what a coach does on the gym floor: pick who's up, r
 
 ## Files
 
-| File | What it holds |
-|---|---|
-| `src/ds/` | Tokens, `tokens.js` and the components (`Section`, `Card`, `Field`, `Segmented`, `Tag`, `StatStrip`, `SaveBar`…). Copied byte for byte from the member app. |
-| `src/DotField.jsx`, `src/dotfield.css` | The masthead's dot field. Copied from the member app. |
-| `src/shell.css` | Base elements and the coach shell (app bar, nav, masthead, `.button`, stat tiles, menu, toast), ported from the member app's `styles.css`, `coachapp.css` and `coach.css`. Class names match the member app. |
-| `src/coach.css` | The coach gate, page heads, stage chips, the Floor, In the gym, take cards, take tabs, the analysis card, sheets and kid rows. |
-| `src/capture.css` | The full-screen camera: top bar, HUD, shutter, Pass/Fail keys, done and Saved cards. |
-| `src/replay.css` | Player, clip, key frames, course map, attempt, portfolio. Classes start with `rp-`. |
-| `src/board.css` | Leaderboard rows. |
-| `src/compare.css` | Side by side. |
-| `src/team.css` | Team runs: picker, panel, standings, spectator screen. |
-| `src/messages.css` | Messages. |
-| `src/ds.test.js` | The member app's guards, run by `npm test`. |
-| `scripts/pages-e2e.mjs` | Every screen at 320, 390, 820, 1024, 1280 and 1366 wide: sideways overflow, squeezed or faded blocks, console errors, full-page shots. |
-| `scripts/coach-e2e.mjs` | The coach's day, with each screen's height in phone screens. |
+| File                                   | What it holds                                                                                                                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/ds/`                              | Tokens, `tokens.js` and the components (`Section`, `Card`, `Field`, `Segmented`, `Tag`, `StatStrip`, `SaveBar`…). Copied byte for byte from the member app.                                                  |
+| `src/DotField.jsx`, `src/dotfield.css` | The masthead's dot field. Copied from the member app.                                                                                                                                                        |
+| `src/shell.css`                        | Base elements and the coach shell (app bar, nav, masthead, `.button`, stat tiles, menu, toast), ported from the member app's `styles.css`, `coachapp.css` and `coach.css`. Class names match the member app. |
+| `src/coach.css`                        | The coach gate, page heads, stage chips, the Floor, In the gym, take cards, take tabs, the analysis card, sheets and kid rows.                                                                               |
+| `src/capture.css`                      | The full-screen camera: top bar, HUD, shutter, Pass/Fail keys, done and Saved cards.                                                                                                                         |
+| `src/replay.css`                       | Player, clip, key frames, course map, attempt, portfolio. Classes start with `rp-`.                                                                                                                          |
+| `src/board.css`                        | Leaderboard rows.                                                                                                                                                                                            |
+| `src/compare.css`                      | Side by side.                                                                                                                                                                                                |
+| `src/team.css`                         | Team runs: picker, panel, standings, spectator screen.                                                                                                                                                       |
+| `src/messages.css`                     | Messages.                                                                                                                                                                                                    |
+| `src/ds.test.js`                       | The member app's guards, run by `npm test`.                                                                                                                                                                  |
+| `scripts/pages-e2e.mjs`                | Every screen at 320, 390, 820, 1024, 1280 and 1366 wide: sideways overflow, squeezed or faded blocks, console errors, full-page shots.                                                                       |
+| `scripts/coach-e2e.mjs`                | The coach's day, with each screen's height in phone screens.                                                                                                                                                 |
 
 `npm run design:sync` copies the shared files from `../lab-skill-unlocks/app` (or `LAB_APP_DIR`); `npm run design:check` fails on drift and runs before every build. `shell.css` is a port, not a copy: when the member app's shell changes, port the change by hand.
 

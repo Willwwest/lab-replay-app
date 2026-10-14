@@ -1,0 +1,332 @@
+/* ============================================
+   LAB REPLAY · TEAM RUNS
+   Picking the running order, the coach's team panel, the standings and
+   the spectator screen. Tokens only.
+   ============================================ */
+
+/* ---------- Picking athletes ---------- */
+.rp-pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+  grid-template-areas:
+    "find order"
+    "chips order";
+  gap: var(--ds-space-3) var(--ds-space-5);
+  align-items: start;
+}
+.rp-pick-find {
+  grid-area: find;
+  position: relative;
+}
+.rp-pick-find > svg {
+  position: absolute;
+  right: var(--ds-space-4);
+  bottom: 14px;
+  color: var(--ds-text-3);
+  pointer-events: none;
+}
+.rp-pick-chips {
+  grid-area: chips;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--ds-space-1);
+}
+.rp-pick-order {
+  grid-area: order;
+  display: grid;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.rp-pick-order ol {
+  display: grid;
+  gap: var(--ds-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-pick-order li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ds-space-2);
+}
+.rp-pick-order .rp-point-n {
+  width: 28px;
+  height: 28px;
+  font-size: var(--ds-text-small);
+}
+.rp-pick-order b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-navy);
+}
+
+/* ---------- The coach's panel ---------- */
+.rp-team {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+.rp-team-next {
+  justify-items: start;
+}
+.rp-team-next .eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  color: var(--ds-sky);
+}
+.rp-team-next .button {
+  min-height: var(--ds-target-lg);
+}
+.rp-team-clock {
+  font-family: var(--ds-font-display);
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-cyan);
+}
+.rp-team-queue {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-team-queue li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) 0;
+  border-bottom: 1px solid var(--ds-border);
+}
+.rp-team-queue li:last-child {
+  border-bottom: 0;
+}
+.rp-team-queue b {
+  color: var(--ds-navy);
+}
+
+/* Obstacles as dots: passed, failed, skipped, now, to come. */
+.rp-team-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-team-marks li {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px
+    color-mix(in srgb, var(--ds-white) 35%, transparent);
+}
+.rp-team-marks li.is-pass {
+  background: var(--ds-good-on-ink);
+  box-shadow: none;
+}
+.rp-team-marks li.is-fail {
+  background: var(--ds-bad-on-ink);
+  box-shadow: none;
+}
+.rp-team-marks li.is-skip {
+  background: var(--ds-text-on-ink-2);
+  box-shadow: none;
+}
+.rp-team-marks li.is-now {
+  box-shadow: inset 0 0 0 3px var(--ds-cyan);
+}
+
+/* ---------- Standings ---------- */
+.rp-standings {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-standings li {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.rp-standings li.is-live {
+  background: var(--ds-info-bg);
+  box-shadow: inset 4px 0 0 var(--ds-cyan);
+}
+.rp-standings li.is-mine {
+  box-shadow: inset 4px 0 0 var(--ds-navy);
+}
+.rp-standings-place {
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  font-size: var(--ds-text-small);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-2);
+}
+.rp-standings-place-1 {
+  background: var(--ds-gold);
+  color: var(--ds-ink);
+}
+.rp-standings-place-2 {
+  background: var(--ds-gray-300);
+  color: var(--ds-ink);
+}
+.rp-standings-place-3 {
+  background: var(--ds-tenure-week);
+  color: var(--ds-white);
+}
+.rp-standings-name {
+  display: grid;
+  min-width: 0;
+}
+.rp-standings-name b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-navy);
+}
+.rp-standings-name small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.rp-standings-time {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-navy);
+}
+/* On the ink spectator screen. */
+.rp-standings.is-dark li {
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+}
+.rp-standings.is-dark li.is-live {
+  background: color-mix(in srgb, var(--ds-cyan) 22%, transparent);
+}
+.rp-standings.is-dark .rp-standings-name b,
+.rp-standings.is-dark .rp-standings-time {
+  color: var(--ds-text-on-ink);
+}
+.rp-standings.is-dark .rp-standings-name small {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-standings.is-dark .rp-standings-place {
+  background: color-mix(in srgb, var(--ds-white) 12%, transparent);
+  color: var(--ds-text-on-ink);
+}
+.rp-standings.is-dark .rp-standings-place-1 {
+  background: var(--ds-gold);
+  color: var(--ds-ink);
+}
+.rp-standings.is-dark .rp-standings-place-2 {
+  background: var(--ds-gray-300);
+  color: var(--ds-ink);
+}
+.rp-standings.is-dark .rp-standings-place-3 {
+  background: var(--ds-tenure-week);
+  color: var(--ds-white);
+}
+
+/* ---------- Spectator screen ---------- */
+.rp-watch {
+  display: grid;
+  gap: var(--ds-space-6);
+  padding: var(--ds-space-8);
+  border-radius: var(--ds-radius-xl);
+  background: var(--ds-grad-deep);
+  color: var(--ds-text-on-ink);
+}
+.rp-watch-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+}
+.rp-watch-head .eyebrow {
+  color: var(--ds-sky);
+}
+.rp-watch-head h2 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h1);
+  line-height: 1.05;
+}
+.rp-watch-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: var(--ds-space-8);
+  align-items: start;
+}
+.rp-watch-live {
+  display: grid;
+  gap: var(--ds-space-3);
+  justify-items: start;
+}
+.rp-watch-live .eyebrow {
+  color: var(--ds-sky);
+}
+.rp-watch-name {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  line-height: 1.1;
+}
+.rp-watch-clock {
+  font-family: var(--ds-font-display);
+  font-size: min(18vw, 140px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-cyan);
+}
+.rp-watch-live p {
+  color: var(--ds-text-on-ink-2);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .rp-pick {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "find"
+      "chips"
+      "order";
+  }
+  .rp-team,
+  .rp-watch-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .rp-watch {
+    padding: var(--ds-space-5);
+  }
+  .rp-watch-head h2 {
+    font-size: var(--ds-text-h2);
+  }
+  .rp-team-queue li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rp-team-queue li .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

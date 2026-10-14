@@ -1,0 +1,605 @@
+/* ============================================
+   LAB DESIGN SYSTEM · COMPONENTS
+   Token names only. No raw colors, sizes or shadows below this line.
+   ============================================ */
+
+.ds-eyebrow {
+  font-size: var(--ds-text-label);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.ds-eyebrow-accent {
+  color: var(--ds-cyan-ink);
+}
+.ds-eyebrow-gold {
+  color: var(--ds-gold);
+}
+.ds-eyebrow-muted {
+  color: var(--ds-text-3);
+}
+.ds-eyebrow-sky {
+  color: var(--ds-sky);
+}
+
+.ds-h2 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ds-navy);
+}
+.ds-h3 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--ds-navy);
+}
+.ds-note {
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-small);
+  line-height: 1.45;
+  color: var(--ds-text-2);
+  max-width: 60ch;
+}
+
+/* Section */
+/* minmax(0, 1fr): a wide child (a scrolling pill row) never widens the page. */
+.ds-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-4);
+  min-width: 0;
+}
+.ds-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  flex-wrap: wrap;
+}
+.ds-section-head > div {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+.ds-section-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.ds-section-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Card */
+.ds-card {
+  min-width: 0;
+  border-radius: var(--ds-radius-lg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--ds-space-4);
+}
+.ds-card-plain {
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-sm);
+}
+.ds-card-muted {
+  background: var(--ds-surface-muted);
+}
+.ds-card-ink {
+  position: relative;
+  overflow: hidden;
+  background: var(--ds-surface-ink);
+  color: var(--ds-text-on-ink);
+}
+/* The brand chevron as a faint watermark, bottom right. */
+.ds-card-ink::before {
+  content: "";
+  position: absolute;
+  width: 360px;
+  height: 330px;
+  right: -90px;
+  bottom: -80px;
+  background: var(--ds-chevron) no-repeat center / contain;
+  opacity: 0.05;
+  pointer-events: none;
+}
+.ds-card-ink > * {
+  position: relative;
+}
+.ds-card-ink > .eyebrow {
+  color: var(--ds-gold);
+}
+.ds-card-ink .ds-h3,
+.ds-card-ink .ds-h2 {
+  color: var(--ds-text-on-ink);
+}
+.ds-card-ink .ds-note {
+  color: var(--ds-text-on-ink-2);
+}
+.ds-pad-sm {
+  padding: var(--ds-space-3);
+}
+.ds-pad-md {
+  padding: var(--ds-space-5);
+}
+.ds-pad-lg {
+  padding: var(--ds-space-6);
+}
+.ds-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--ds-space-3);
+  flex-wrap: wrap;
+}
+
+/* Tag */
+.ds-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  padding: 5px 10px;
+  border-radius: var(--ds-radius-pill);
+  font-style: normal;
+  font-size: var(--ds-text-label);
+  font-weight: 700;
+  line-height: 1.25;
+  max-width: 100%;
+}
+.ds-tag svg {
+  flex: none;
+}
+.ds-tag-neutral {
+  background: var(--ds-gray-50);
+  color: var(--ds-text-2);
+}
+.ds-tag-outline {
+  background: var(--ds-surface);
+  color: var(--ds-text-2);
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
+}
+.ds-tag-info {
+  background: var(--ds-info-bg);
+  color: var(--ds-info);
+}
+.ds-tag-good {
+  background: var(--ds-good-bg);
+  color: var(--ds-good);
+}
+.ds-tag-warn {
+  background: var(--ds-warn-bg);
+  color: var(--ds-warn);
+}
+.ds-tag-bad {
+  background: var(--ds-bad-bg);
+  color: var(--ds-bad);
+}
+.ds-tag-care {
+  background: var(--ds-care-bg);
+  color: var(--ds-care);
+}
+/* Live right now: the one cyan tag. */
+.ds-tag-live {
+  background: var(--ds-cyan);
+  color: var(--ds-ink);
+}
+.ds-tag-brand {
+  background: var(--ds-navy);
+  color: var(--ds-text-on-ink);
+}
+.ds-tag-first {
+  background: var(--ds-tenure-first);
+  color: var(--ds-white);
+}
+.ds-tag-week {
+  background: var(--ds-tenure-week);
+  color: var(--ds-white);
+}
+
+/* Segmented */
+/* One row always; a row too long for its box scrolls sideways. */
+.ds-seg {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 2px;
+  padding: var(--ds-space-1);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
+  max-width: 100%;
+}
+.ds-seg button {
+  flex: none;
+  white-space: nowrap;
+  min-height: 36px;
+  padding: 0 var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  font-weight: 600;
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-2);
+  transition: background var(--ds-fast), color var(--ds-fast);
+}
+.ds-seg-lg button {
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-5);
+}
+.ds-seg button[aria-checked="true"] {
+  background: var(--ds-navy);
+  color: var(--ds-text-on-ink);
+}
+.ds-seg button:disabled {
+  opacity: 0.6;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ds-seg button:not([aria-checked="true"]):not(:disabled):hover {
+    background: var(--ds-gray-50);
+  }
+}
+
+/* Field, select, textarea */
+.ds-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.ds-field-label {
+  font-size: var(--ds-text-label);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+.ds-field-hint {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.ds-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.ds-select select,
+.ds-input,
+.ds-textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+  font: inherit;
+  font-size: var(--ds-text-body);
+  color: var(--ds-text);
+  transition: border-color var(--ds-fast), background var(--ds-fast), box-shadow var(--ds-fast);
+}
+.ds-select select {
+  appearance: none;
+  min-height: var(--ds-target);
+  padding: 0 40px 0 var(--ds-space-4);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ds-select svg {
+  position: absolute;
+  right: var(--ds-space-3);
+  pointer-events: none;
+  color: var(--ds-text-3);
+}
+.ds-input {
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-4);
+}
+.ds-input::placeholder,
+.ds-textarea::placeholder {
+  color: var(--ds-text-3);
+}
+.ds-textarea {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  line-height: 1.45;
+  resize: vertical;
+}
+.ds-select select:hover:not(:disabled),
+.ds-input:hover:not(:disabled),
+.ds-textarea:hover:not(:disabled) {
+  border-color: var(--ds-border-strong);
+}
+.ds-select select:focus,
+.ds-input:focus,
+.ds-textarea:focus {
+  outline: none;
+  background: var(--ds-surface);
+  border-color: var(--ds-cyan);
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.ds-select select:disabled,
+.ds-textarea:disabled {
+  cursor: default;
+  background: transparent;
+  padding-left: 0;
+  color: var(--ds-text);
+}
+.ds-select:has(select:disabled) svg {
+  display: none;
+}
+
+/* Icon button */
+.ds-iconbtn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--ds-target);
+  height: var(--ds-target);
+  border-radius: 50%;
+  color: var(--ds-text-3);
+  transition: background var(--ds-fast), color var(--ds-fast);
+}
+.ds-iconbtn:disabled {
+  opacity: 0.35;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ds-iconbtn:not(:disabled):hover {
+    background: var(--ds-gray-50);
+    color: var(--ds-text);
+  }
+  .ds-iconbtn-danger:not(:disabled):hover {
+    background: var(--ds-bad-bg);
+    color: var(--ds-bad);
+  }
+}
+
+/* Stat strip: as many equal tiles as you give it */
+.ds-statstrip {
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+}
+.ds-stat .stat-value small {
+  font-size: 20px;
+}
+@media (max-width: 900px) {
+  .ds-statstrip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ds-statstrip .stat-tile:last-child {
+    grid-column: auto;
+  }
+  /* An odd tile out takes the full row. */
+  .ds-statstrip .stat-tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Chart card */
+.ds-chartcard-body {
+  min-width: 0;
+}
+
+/* Coach mark */
+.ds-coach {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--mark);
+  height: var(--mark);
+  border-radius: 50%;
+  background: var(--ds-sky);
+  color: var(--ds-navy);
+  font-size: calc(var(--mark) * 0.34);
+  font-weight: 800;
+  box-shadow: 0 0 0 2px var(--ds-surface);
+}
+.ds-coach-stack {
+  display: inline-flex;
+  flex: none;
+}
+.ds-coach-stack > .ds-coach + .ds-coach {
+  margin-left: calc(var(--ds-space-1) * -1);
+}
+.ds-coach-head {
+  background: var(--ds-navy);
+  color: var(--ds-text-on-ink);
+}
+.ds-coach-attendant {
+  background: var(--ds-mint);
+}
+
+/* Switch */
+.ds-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  min-height: var(--ds-target);
+  cursor: pointer;
+}
+.ds-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.ds-switch-track {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 28px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-gray-200);
+  transition: background var(--ds-fast);
+}
+.ds-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ds-white);
+  box-shadow: var(--ds-shadow-sm);
+  transition: transform var(--ds-fast) var(--ds-ease);
+}
+.ds-switch input:checked + .ds-switch-track {
+  background: var(--ds-navy);
+}
+.ds-switch input:checked + .ds-switch-track::after {
+  transform: translateX(18px);
+}
+.ds-switch input:focus-visible + .ds-switch-track {
+  box-shadow: 0 0 0 3px var(--ds-focus);
+}
+.ds-switch input:disabled + .ds-switch-track {
+  opacity: 0.5;
+}
+.ds-switch-text {
+  display: grid;
+  min-width: 0;
+}
+.ds-switch-text b {
+  font-weight: 600;
+}
+.ds-switch-text small {
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-3);
+}
+
+/* Save bar */
+.ds-savebar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--ds-space-5) + env(safe-area-inset-bottom));
+  z-index: 46;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - var(--ds-space-6)));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-3) var(--ds-space-3) var(--ds-space-6);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface-ink);
+  color: var(--ds-text-on-ink);
+  font-weight: 700;
+  box-shadow: var(--ds-shadow-md);
+}
+.ds-savebar > div {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+@media (max-width: 760px) {
+  .ds-savebar {
+    bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Empty state */
+.ds-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-8) var(--ds-space-4);
+  text-align: center;
+  color: var(--ds-text-3);
+}
+.ds-empty b {
+  color: var(--ds-text);
+}
+
+/* Chip: toggle pill */
+.ds-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: 36px;
+  padding: 0 var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  box-shadow: inset 0 0 0 1px var(--ds-border-strong);
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-text);
+  transition: background var(--ds-fast), color var(--ds-fast), box-shadow var(--ds-fast);
+}
+.ds-chip[aria-pressed="true"] {
+  background: var(--ds-navy);
+  color: var(--ds-text-on-ink);
+  box-shadow: none;
+}
+.ds-chip:disabled {
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ds-chip:not([aria-pressed="true"]):not(:disabled):hover {
+    box-shadow: inset 0 0 0 1px var(--ds-navy);
+  }
+}
+
+/* Button on dark surfaces (the app's pill buttons cover the rest) */
+.button.ds-btn-light {
+  border: 1.5px solid var(--ds-text-on-ink-2);
+  background: transparent;
+  color: var(--ds-text-on-ink);
+}
+
+/* More tag tones */
+.ds-tag-month {
+  background: var(--ds-tenure-month-bg);
+  color: var(--ds-tenure-month-ink);
+}
+.ds-tag-sixty {
+  background: var(--ds-tenure-sixty-bg);
+  color: var(--ds-tenure-sixty-ink);
+}
+/* A data color as a light tint with a dot, e.g. the kid's shirt tier. */
+.ds-tag-swatch {
+  background: color-mix(in srgb, var(--tag) 16%, var(--ds-white));
+  color: var(--ds-navy);
+}
+.ds-tag-swatch::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tag);
+}
+
+/* Stat tile tones (sky, mint and lime come from the app's base styles) */
+.ds-stat.tile-lavender {
+  background: var(--ds-lavender);
+}
+
+@media (max-width: 560px) {
+  /* Pills stay on one line and scroll if they must. */
+  .ds-seg button {
+    padding: 0 var(--ds-space-3);
+  }
+  .ds-savebar {
+    padding-left: var(--ds-space-4);
+  }
+  .ds-savebar > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-seg button,
+  .ds-chip,
+  .ds-iconbtn,
+  .ds-select select,
+  .ds-textarea {
+    transition: none;
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "lab-replay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5180",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5180",
+    "test": "node --test src/domain.test.js src/attempts.test.js src/workflow.test.js src/runs.test.js src/compare.test.js src/ds.test.js server/access.test.js server/runs.test.js server/teams.test.js server/messages.test.js server/overlay.test.js",
+    "worker": "esbuild src/pose.worker.js --bundle --format=iife --platform=browser --outfile=public/processor.js",
+    "predev": "npm run worker",
+    "prebuild": "npm run worker && npm run design:check",
+    "service": "node server/index.mjs",
+    "format": "prettier --write \"src/**/*.{js,jsx,css}\" \"scripts/*.mjs\" \"server/*.{js,mjs}\" vite.config.js",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,css}\" \"scripts/*.mjs\" \"server/*.{js,mjs}\" vite.config.js",
+    "design:sync": "node scripts/sync-design.mjs",
+    "design:check": "node scripts/sync-design.mjs --check",
+    "e2e:pages": "node scripts/pages-e2e.mjs",
+    "e2e:portfolio": "node scripts/portfolio-review.mjs",
+    "e2e:attempt": "node scripts/attempt-review.mjs",
+    "e2e:capture": "node scripts/capture-review.mjs",
+    "e2e:run": "node scripts/run-e2e.mjs",
+    "e2e:compare": "node scripts/compare-e2e.mjs",
+    "e2e:leaderboard": "node scripts/leaderboard-e2e.mjs",
+    "e2e:team": "node scripts/team-e2e.mjs",
+    "e2e:messages": "node scripts/messages-e2e.mjs",
+    "e2e:overlay": "node scripts/overlay-e2e.mjs"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "0.10.32",
+    "lucide-react": "0.468.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "esbuild": "^0.28.2",
+    "prettier": "3.9.10",
+    "vite": "^7.3.7"
+  }
+}

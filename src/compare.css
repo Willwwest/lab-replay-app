@@ -1,0 +1,172 @@
+/* ============================================
+   LAB REPLAY · SIDE BY SIDE
+   Two takes in one ink card, side by side or as a ghost overlay, with
+   the alignment and obstacle-time cards below. Tokens only.
+   ============================================ */
+
+.rp-compare-pick {
+  width: min(420px, 100%);
+}
+.rp-compare-pick .ds-select select {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+}
+
+/* ---------- Stage ---------- */
+.rp-compare-stage {
+  display: grid;
+  gap: var(--ds-space-3);
+}
+.rp-compare-stage.is-side {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Ghost: B sits over A; captions stack under the one picture. */
+.rp-compare-stage.is-ghost {
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
+}
+.rp-compare-stage figure {
+  display: grid;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+.rp-compare-stage video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+}
+.rp-compare-stage figcaption {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-width: 0;
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-text-on-ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.is-ghost .rp-compare-b {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
+}
+.is-ghost .rp-compare-b video {
+  background: transparent;
+}
+.is-ghost .rp-compare-b figcaption {
+  visibility: hidden;
+}
+.rp-compare .ds-tag-outline {
+  background: transparent;
+  color: var(--ds-text-on-ink);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 30%, transparent);
+}
+
+/* ---------- Controls on ink ---------- */
+.rp-compare-scrub {
+  width: 100%;
+  min-height: var(--ds-target);
+  accent-color: var(--ds-cyan);
+  cursor: pointer;
+}
+.rp-compare .ds-seg {
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 16%, transparent);
+}
+.rp-compare .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-compare .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+.rp-compare-ghost {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-target);
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-text-on-ink-2);
+}
+.rp-compare-ghost input {
+  width: 140px;
+  accent-color: var(--ds-cyan);
+}
+.rp-compare-ghost b {
+  min-width: 3.5ch;
+  color: var(--ds-text-on-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Detail cards ---------- */
+.rp-compare-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+.rp-compare-nudge {
+  display: grid;
+  gap: 6px;
+}
+.rp-compare-offset {
+  min-width: 10ch;
+  text-align: center;
+  color: var(--ds-navy);
+  font-variant-numeric: tabular-nums;
+}
+.rp-compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--ds-text-small);
+  font-variant-numeric: tabular-nums;
+}
+.rp-compare-table th,
+.rp-compare-table td {
+  padding: var(--ds-space-2) var(--ds-space-2);
+  border-bottom: 1px solid var(--ds-border);
+  text-align: right;
+}
+.rp-compare-table th:first-child {
+  text-align: left;
+}
+.rp-compare-table thead th {
+  font-size: var(--ds-text-label);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-text-3);
+}
+.rp-compare-table tbody th {
+  font-weight: 600;
+  color: var(--ds-navy);
+}
+.rp-compare-table tfoot th,
+.rp-compare-table tfoot td {
+  border-bottom: 0;
+  font-weight: 800;
+  color: var(--ds-navy);
+}
+
+@media (max-width: 900px) {
+  .rp-compare-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .rp-compare-stage.is-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-compare-ghost input {
+    width: 100px;
+  }
+}

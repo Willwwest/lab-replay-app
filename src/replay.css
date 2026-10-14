@@ -1,0 +1,516 @@
+/* ============================================
+   LAB REPLAY · PAGE
+   Layout for the review and requests screens, built from ds components.
+   Classes are prefixed rp-. Tokens only.
+   ============================================ */
+
+/* ---------- App bar ---------- */
+.rp-brand-name {
+  padding-left: var(--ds-space-3);
+  border-left: 1px solid color-mix(in srgb, var(--ds-white) 30%, transparent);
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ds-white);
+}
+.rp-account {
+  position: relative;
+}
+
+/* ---------- Shared bits ---------- */
+.rp-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.rp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-1);
+}
+.rp-inline {
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-text-2);
+}
+.rp-inline.is-error {
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bad-bg);
+  color: var(--ds-bad);
+}
+/* A number in a navy disc: route points and obstacles. */
+.rp-point-n {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ds-navy);
+  color: var(--ds-text-on-ink);
+  font-family: var(--ds-font-display);
+  font-weight: 800;
+}
+/* A labeled number input with its "use playhead" button. */
+.rp-bound {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+.rp-bound .ds-field {
+  flex: 1 1 0;
+}
+
+/* Fields sitting on the page, not in a card, need their own surface. */
+.rp-library-member .ds-select select,
+.rp-saved-course .ds-select select {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+}
+
+/* ---------- Session library ---------- */
+.rp-library-member {
+  width: min(280px, 100%);
+}
+.rp-takes {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 260px);
+  gap: var(--ds-space-3);
+  overflow-x: auto;
+  padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3);
+  margin: calc(-1 * var(--ds-space-1));
+  scroll-snap-type: x proximity;
+}
+.rp-take {
+  display: grid;
+  gap: var(--ds-space-1);
+  align-content: start;
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-sm);
+  border-left: 5px solid transparent;
+  text-align: left;
+  scroll-snap-align: start;
+  transition:
+    box-shadow var(--ds-fast),
+    transform var(--ds-fast) var(--ds-ease);
+}
+.rp-take[aria-current="true"] {
+  border-left-color: var(--ds-cyan);
+  background: linear-gradient(90deg, var(--ds-info-bg), var(--ds-white) 70%);
+}
+.rp-take-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--ds-space-1);
+  color: var(--ds-text-3);
+}
+.rp-take b {
+  font-size: var(--ds-text-body);
+  color: var(--ds-navy);
+}
+.rp-take-meta {
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Camera ---------- */
+.rp-capture-video {
+  width: 100%;
+  max-height: 62vh;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+  object-fit: contain;
+}
+
+/* ---------- Video and coaching ---------- */
+.rp-review {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+.rp-review-main,
+.rp-review-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-5);
+  min-width: 0;
+}
+.rp-video {
+  overflow: hidden;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+}
+.rp-video video {
+  display: block;
+  width: 100%;
+  max-height: 64vh;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+}
+.rp-transport {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-time {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.rp-time small {
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-on-ink-2);
+}
+/* Ink card segmented control: light pills on dark. */
+.rp-player .ds-seg {
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 16%, transparent);
+}
+.rp-player .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-player .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+
+/* Clip */
+.rp-range {
+  position: relative;
+  height: 28px;
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-surface-muted);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
+}
+.rp-range-fill {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 7px;
+  background: var(--ds-sky);
+  box-shadow: inset 0 0 0 2px var(--ds-cyan-ink);
+}
+.rp-range-head {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--ds-navy);
+}
+.rp-clip-bounds {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--ds-space-4);
+}
+.rp-request {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border);
+}
+
+/* Coach review */
+.rp-coach > .button {
+  justify-self: start;
+}
+
+/* ---------- Key frames ---------- */
+.rp-frames {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: var(--ds-space-4);
+}
+.rp-frame {
+  gap: var(--ds-space-3);
+}
+.rp-frame-image {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+}
+.rp-frame-image img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+.rp-frame-image span {
+  position: absolute;
+  right: var(--ds-space-2);
+  bottom: var(--ds-space-2);
+  padding: 2px var(--ds-space-2);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-ink) 82%, transparent);
+  color: var(--ds-white);
+  font-size: var(--ds-text-label);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rp-frame-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rp-frame > .button {
+  justify-self: start;
+}
+
+/* ---------- Course map ---------- */
+.rp-saved-course {
+  width: min(320px, 100%);
+}
+.rp-course {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+.rp-board {
+  position: sticky;
+  top: calc(var(--ds-nav-h) + var(--ds-space-6));
+}
+.rp-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  border-radius: var(--ds-radius-md);
+  cursor: crosshair;
+}
+.rp-map-ground {
+  fill: var(--ds-gray-50);
+}
+.rp-map-route {
+  fill: none;
+  stroke: var(--ds-cyan-ink);
+  stroke-width: 8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.rp-map-point circle {
+  fill: var(--ds-navy);
+}
+.rp-map-point text {
+  fill: var(--ds-white);
+  font-size: 22px;
+  font-weight: 700;
+}
+.rp-route,
+.rp-obstacles,
+.rp-history,
+.rp-jobs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-point {
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--ds-space-3);
+}
+.rp-point > .rp-point-n {
+  align-self: center;
+}
+.rp-point-acts {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+.rp-point-acts > .button {
+  margin-right: auto;
+}
+
+/* ---------- Course attempt ---------- */
+.rp-obstacle-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-obstacle-head > div {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.rp-obstacle-times {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-obstacle-times .rp-bound {
+  flex: 1 1 220px;
+}
+.rp-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-4);
+  margin-top: var(--ds-space-4);
+}
+.rp-history-run {
+  gap: var(--ds-space-3);
+}
+.rp-history-run b {
+  color: var(--ds-navy);
+}
+.rp-history-run .ds-note {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+}
+
+/* ---------- Portfolio ---------- */
+.rp-checks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-checks li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+  color: var(--ds-text-2);
+  font-weight: 600;
+  font-size: var(--ds-text-small);
+}
+.rp-checks li.is-done {
+  background: var(--ds-good-bg);
+  color: var(--ds-good);
+}
+.rp-portfolio-video {
+  width: 100%;
+  max-height: 60vh;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+}
+
+/* ---------- Requests ---------- */
+.rp-job {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.rp-job-main {
+  display: grid;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+.rp-job-course {
+  color: var(--ds-text-2);
+}
+.rp-meter {
+  display: grid;
+  gap: var(--ds-space-1);
+}
+.rp-meter progress {
+  width: 100%;
+  height: 10px;
+  appearance: none;
+  border: 0;
+  border-radius: var(--ds-radius-pill);
+  overflow: hidden;
+  background: var(--ds-gray-100);
+  accent-color: var(--ds-cyan);
+}
+.rp-meter progress::-webkit-progress-bar {
+  background: var(--ds-gray-100);
+}
+.rp-meter progress::-webkit-progress-value {
+  background: var(--ds-cyan);
+}
+.rp-meter progress::-moz-progress-bar {
+  background: var(--ds-cyan);
+}
+
+/* ---------- Hover (mouse only) ---------- */
+@media (hover: hover) and (pointer: fine) {
+  .rp-take:hover {
+    box-shadow: var(--ds-shadow-md);
+    transform: translateY(-1px);
+  }
+}
+
+/* ---------- Narrower screens ---------- */
+@media (max-width: 1100px) {
+  .rp-review {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-review-side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+@media (max-width: 900px) {
+  .rp-course {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-board {
+    position: static;
+  }
+  .rp-map {
+    max-height: 60vh;
+  }
+  .rp-job {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .rp-brand-name {
+    font-size: var(--ds-text-body);
+    padding-left: var(--ds-space-2);
+  }
+  .rp-review-side,
+  .rp-clip-bounds {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-point {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .rp-point > .ds-field + .ds-field,
+  .rp-point-acts {
+    grid-column: 1 / -1;
+  }
+  .rp-transport {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-take {
+    transition: none;
+  }
+}

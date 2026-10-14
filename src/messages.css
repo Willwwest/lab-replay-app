@@ -1,0 +1,175 @@
+/* ============================================
+   LAB REPLAY · MESSAGES
+   Conversations beside the open thread; on phones one at a time.
+   Tokens only.
+   ============================================ */
+
+.rp-messages {
+  display: grid;
+  grid-template-columns: minmax(0, 340px) minmax(0, 1fr);
+  gap: var(--ds-space-5);
+  align-items: start;
+}
+
+/* ---------- Conversation list ---------- */
+.rp-threads {
+  gap: var(--ds-space-3);
+}
+.rp-threads-list {
+  display: grid;
+  gap: var(--ds-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-thread-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  width: 100%;
+  min-height: var(--ds-target-lg);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  text-align: left;
+}
+.rp-thread-row[aria-current="true"] {
+  background: var(--ds-info-bg);
+  box-shadow: inset 4px 0 0 var(--ds-cyan);
+}
+.rp-thread-row-text {
+  display: grid;
+  min-width: 0;
+}
+.rp-thread-row-text b {
+  color: var(--ds-navy);
+}
+.rp-thread-row-text small,
+.rp-thread-row-meta small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-3);
+}
+.rp-thread-row-meta {
+  display: grid;
+  justify-items: end;
+  gap: var(--ds-space-1);
+}
+
+/* ---------- The open thread ---------- */
+.rp-thread-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-space-2);
+}
+.rp-thread-head > .ds-iconbtn {
+  display: none;
+}
+.rp-msgs {
+  display: grid;
+  gap: var(--ds-space-3);
+  max-height: 52vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--ds-space-4);
+  list-style: none;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.rp-msgs li {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-space-1);
+}
+.rp-msgs li.is-coach {
+  flex-direction: row-reverse;
+}
+.rp-msgs-empty {
+  justify-content: center;
+}
+.rp-msg {
+  display: grid;
+  gap: var(--ds-space-2);
+  max-width: min(520px, 85%);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  box-shadow: var(--ds-shadow-sm);
+}
+.is-coach .rp-msg {
+  background: var(--ds-lavender);
+  border-bottom-right-radius: var(--ds-space-1);
+}
+.is-family .rp-msg {
+  border-bottom-left-radius: var(--ds-space-1);
+}
+.rp-msg p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rp-msg-who {
+  font-size: var(--ds-text-label);
+  font-weight: 700;
+  color: var(--ds-text-3);
+}
+.rp-msg-run {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
+  color: var(--ds-navy);
+}
+.rp-msg-run div {
+  display: grid;
+  min-width: 0;
+}
+.rp-msg-run small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+
+/* ---------- Composer ---------- */
+.rp-compose {
+  display: grid;
+  gap: var(--ds-space-3);
+}
+.rp-compose-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-compose-attach {
+  flex: 1 1 240px;
+}
+.rp-compose-preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ds-space-2);
+  color: var(--ds-text-3);
+}
+
+/* ---------- Phones: one pane at a time ---------- */
+@media (max-width: 900px) {
+  .rp-messages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-messages.is-open .rp-threads,
+  .rp-messages:not(.is-open) .rp-thread-none {
+    display: none;
+  }
+  .rp-thread-head > .ds-iconbtn {
+    display: grid;
+  }
+  .rp-msgs {
+    max-height: 56vh;
+  }
+}

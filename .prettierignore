@@ -1,0 +1,12 @@
+dist/
+node_modules/
+design-*-backup/
+public/
+data/
+test-results/
+review-out/
+# Copied byte for byte from the member app (npm run design:sync).
+src/ds/
+src/DotField.jsx
+src/dotfield.css
+scripts/review-kit.mjs

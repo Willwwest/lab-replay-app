@@ -1,0 +1,566 @@
+/* ============================================
+   LAB REPLAY · LIVE RUN
+   Run setup, recent runs, and the full-screen run with thumb-sized keys.
+   Classes are prefixed rp-run / rp-setup. Tokens only.
+   ============================================ */
+
+/* ---------- Setup ---------- */
+.rp-setup > .ds-seg {
+  justify-self: start;
+}
+.rp-setup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--ds-space-4);
+  align-items: start;
+}
+.rp-setup-course {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: var(--ds-space-4);
+  list-style: none;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.rp-setup-course li {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-3) var(--ds-space-1)
+    var(--ds-space-1);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface);
+  box-shadow: inset 0 0 0 1px var(--ds-border);
+}
+.rp-setup-course .rp-point-n {
+  width: 28px;
+  height: 28px;
+  font-size: var(--ds-text-small);
+}
+.rp-setup-course li > span:last-child {
+  display: grid;
+  line-height: 1.2;
+}
+.rp-setup-course small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.rp-setup-switches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--ds-space-2) var(--ds-space-5);
+}
+.rp-setup-go {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3) var(--ds-space-5);
+  padding-top: var(--ds-space-4);
+  border-top: 1px solid var(--ds-border);
+}
+.rp-setup-go .ds-note {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  margin: 0 auto 0 0;
+}
+.rp-setup-go .button {
+  min-height: var(--ds-target-lg);
+}
+
+/* ---------- Recent runs ---------- */
+.rp-runs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-run-row {
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+}
+.rp-run-row-time {
+  display: grid;
+}
+.rp-run-row-time b {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: var(--ds-navy);
+}
+.rp-run-row-time small {
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.rp-run-row .rp-tags {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ---------- Leaderboard ---------- */
+.rp-ranks-pick {
+  width: min(360px, 100%);
+}
+.rp-ranks-pick .ds-select select {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+}
+.rp-ranks {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-ranks li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-5);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-sm);
+}
+.rp-ranks li.is-next {
+  border-left: 5px solid var(--ds-cyan);
+  background: linear-gradient(90deg, var(--ds-info-bg), var(--ds-white) 60%);
+}
+.rp-ranks-rank {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 36px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-muted);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-2);
+}
+.rp-ranks-rank-1 {
+  background: var(--ds-gold);
+  color: var(--ds-ink);
+}
+.rp-ranks-rank-2 {
+  background: var(--ds-gray-300);
+  color: var(--ds-ink);
+}
+.rp-ranks-rank-3 {
+  background: var(--ds-tenure-week);
+  color: var(--ds-white);
+}
+.rp-ranks-name {
+  display: grid;
+  min-width: 0;
+}
+.rp-ranks-name b {
+  color: var(--ds-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-ranks-name small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.rp-ranks-time {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-navy);
+}
+
+/* ---------- The live screen ---------- */
+.rp-run {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--ds-grad-deep);
+  color: var(--ds-text-on-ink);
+}
+/* Ten seconds to the cap: a gold frame and a gold clock. */
+.rp-run.is-warn {
+  box-shadow: inset 0 0 0 6px var(--ds-gold);
+}
+.rp-run-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ds-space-5);
+  max-width: 760px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: calc(var(--ds-space-4) + env(safe-area-inset-top)) var(--ds-space-4)
+    calc(var(--ds-space-8) + env(safe-area-inset-bottom));
+  align-content: start;
+}
+.rp-run-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-run-who {
+  display: grid;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.rp-run-who .eyebrow {
+  color: var(--ds-sky);
+}
+.rp-run-who b {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  line-height: 1.15;
+}
+.rp-run-bar .ds-tag-outline {
+  background: transparent;
+  color: var(--ds-text-on-ink);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 30%, transparent);
+}
+.rp-run-cam {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-black);
+}
+.rp-run-cam video {
+  display: block;
+  width: 100%;
+  max-height: 34vh;
+  object-fit: contain;
+}
+/* The timer over the live picture, as it is burned into the recording. */
+.rp-run-hud {
+  position: absolute;
+  left: var(--ds-space-3);
+  bottom: var(--ds-space-3);
+  display: grid;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-ink) 70%, transparent);
+  pointer-events: none;
+}
+.rp-run-hud b {
+  font-family: var(--ds-font-display);
+  font-size: 40px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rp-run-hud span {
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-sky);
+}
+.rp-run-flash {
+  position: absolute;
+  top: var(--ds-space-3);
+  right: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-white);
+  pointer-events: none;
+}
+.rp-run-flash.is-pass {
+  background: var(--ds-data-goal);
+}
+.rp-run-flash.is-fail {
+  background: var(--ds-data-alert);
+}
+.rp-run-flash.is-skip {
+  background: var(--ds-gray-500);
+}
+.rp-run-rec {
+  position: absolute;
+  top: var(--ds-space-3);
+  left: var(--ds-space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-ink) 70%, transparent);
+  font-size: var(--ds-text-label);
+  font-weight: 800;
+  pointer-events: none;
+}
+.rp-run-rec::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ds-bad-on-ink);
+}
+.rp-run-cam-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ds-text-on-ink-2);
+}
+.rp-run-start {
+  display: grid;
+  gap: var(--ds-space-4);
+  padding-top: var(--ds-space-6);
+  text-align: center;
+}
+.rp-run-hint,
+.rp-run-keys {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-run-keys {
+  font-size: var(--ds-text-label);
+}
+.rp-run-count {
+  padding: var(--ds-space-8) 0;
+  font-family: var(--ds-font-display);
+  font-size: min(48vw, 260px);
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  color: var(--ds-cyan);
+}
+.rp-run-clock {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-1);
+}
+.rp-run-time {
+  font-family: var(--ds-font-display);
+  font-size: min(26vw, 148px);
+  font-weight: 800;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.is-warn .rp-run-time {
+  color: var(--ds-gold);
+}
+.rp-run-pace {
+  font-weight: 700;
+  color: var(--ds-bad-on-ink);
+}
+.rp-run-pace.is-ahead {
+  color: var(--ds-good-on-ink);
+}
+.rp-run-now {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-4) var(--ds-space-5);
+  border-radius: var(--ds-radius-lg);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-white) 16%, transparent);
+}
+.rp-run-now .rp-point-n {
+  width: 48px;
+  height: 48px;
+  font-size: var(--ds-text-h3);
+  background: var(--ds-cyan);
+  color: var(--ds-ink);
+}
+.rp-run-now div {
+  display: grid;
+  min-width: 0;
+}
+.rp-run-now b {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  line-height: 1.1;
+}
+.rp-run-now span {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-run-pad {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: var(--ds-space-3);
+}
+.rp-run-pad.is-quick {
+  grid-template-columns: 1fr;
+}
+.rp-run-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  min-height: 112px;
+  border-radius: var(--ds-radius-xl);
+  font-family: var(--ds-font-display);
+  font-size: 32px;
+  font-weight: 800;
+  transition: transform 0.08s var(--ds-ease);
+}
+.rp-run-key:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.rp-run-pass {
+  background: var(--ds-cyan);
+  color: var(--ds-ink);
+}
+.rp-run-fail {
+  background: var(--ds-bad);
+  color: var(--ds-white);
+}
+.rp-run-start .rp-run-pass {
+  min-height: 96px;
+}
+.rp-run-pad .button {
+  min-height: var(--ds-target-lg);
+}
+.rp-run-result {
+  display: grid;
+  gap: var(--ds-space-3);
+  justify-items: center;
+  text-align: center;
+}
+.rp-run-result h2 {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  line-height: 1.1;
+}
+.rp-run-result .rp-tags {
+  justify-content: center;
+}
+.rp-run-replay {
+  width: 100%;
+  max-height: 40vh;
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-black);
+}
+.rp-run-splits {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-run-splits li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "n label mark times";
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-white) 7%, transparent);
+}
+.rp-run-n {
+  grid-area: n;
+  min-width: 24px;
+  font-weight: 800;
+  color: var(--ds-text-on-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.rp-run-label {
+  grid-area: label;
+  display: grid;
+  min-width: 0;
+}
+.rp-run-label b,
+.rp-run-label small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-run-label small,
+.rp-run-times small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-run-mark {
+  grid-area: mark;
+  min-width: 0;
+}
+.rp-run-times {
+  grid-area: times;
+  display: grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+}
+.rp-run-splits .ds-seg {
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 16%, transparent);
+}
+.rp-run-splits .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-run-splits .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+.rp-run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-3);
+}
+.rp-run-actions .rp-inline {
+  flex-basis: 100%;
+}
+.rp-run-saved {
+  display: flex;
+  flex-basis: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-weight: 700;
+  color: var(--ds-good-on-ink);
+}
+
+@media (max-width: 560px) {
+  .rp-run-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .rp-run-row .rp-tags {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .rp-run-splits li {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "n label times"
+      "n mark mark";
+  }
+  .rp-run-n {
+    align-self: start;
+  }
+  .rp-run-key {
+    min-height: 96px;
+    font-size: 26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-run-key {
+    transition: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .rp-ranks li {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    padding: var(--ds-space-3);
+  }
+  .rp-ranks-tag {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .rp-ranks-tag:empty {
+    display: none;
+  }
+}

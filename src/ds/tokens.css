@@ -1,0 +1,152 @@
+/* ============================================
+   LAB DESIGN SYSTEM · TOKENS
+   The only place raw values live. Components and pages use these names.
+   ds/tokens.js mirrors every --ds-* value for code that can't read CSS
+   (ECharts); ds.test.js fails if the two drift apart.
+   ============================================ */
+
+:root {
+  /* Brand */
+  --ds-ink: #090d19;
+  --ds-navy: #0f0e54;
+  --ds-navy-2: #1a1970;
+  --ds-royal: #1557be;
+  --ds-royal-deep: #0a2690;
+  --ds-cyan: #22bced;
+  --ds-cyan-ink: #0b86b5;
+  --ds-sky: #a1e2f7;
+  --ds-sky-pale: #e1f4fa;
+  --ds-mint: #c2e6db;
+  --ds-mint-ink: #2fb28b;
+  --ds-lime: #f0fee0;
+  --ds-lavender: #dfe5fb;
+  --ds-gold: #f2b01e;
+
+  /* Neutrals */
+  --ds-white: #ffffff;
+  --ds-black: #000000;
+  --ds-night: #02030f;
+  --ds-gray-25: #fbfcfe;
+  --ds-gray-50: #f4f7fc;
+  --ds-gray-100: #e6eaf3;
+  --ds-gray-200: #cdd5e6;
+  --ds-gray-300: #c9d1e3;
+  --ds-gray-400: #9ba3bd;
+  --ds-gray-500: #767b96;
+  --ds-gray-700: #464b66;
+  --ds-gray-900: #13162a;
+
+  /* Surfaces and text */
+  --ds-bg: var(--ds-gray-50);
+  --ds-surface: var(--ds-white);
+  --ds-surface-muted: var(--ds-gray-50);
+  --ds-surface-ink: var(--ds-ink);
+  --ds-border: var(--ds-gray-100);
+  --ds-border-strong: var(--ds-gray-200);
+  --ds-text: var(--ds-ink);
+  --ds-text-2: var(--ds-gray-700);
+  --ds-text-3: var(--ds-gray-500);
+  --ds-text-on-ink: var(--ds-white);
+  --ds-text-on-ink-2: #bfd2ee;
+  --ds-focus: rgba(34, 188, 237, 0.45);
+
+  /* Brand gradients and textures */
+  --ds-grad-panel: linear-gradient(100deg, #0f0e54 0%, #0b1d84 34%, #0a35b4 66%, #1b7fde 100%);
+  --ds-grad-deep: linear-gradient(100deg, #1557be 0%, #0a2690 34%, #04104f 66%, #02030f 100%);
+
+  --ds-dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Crect x='5' y='5' width='3.4' height='3.4' rx='.6' fill='%2394d2ff'/%3E%3C/svg%3E");
+  --ds-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='33 0 46 42'%3E%3Cpath d='M33.96 41.26 44.96 20.63 65.93 31.8 52.5 6.61 56.04 0 78.04 41.26 70.33 41.29 47.53 29.11 41.01 41.26Z' fill='%23ffffff'/%3E%3C/svg%3E");
+
+  /* Status: each tone is a background and its text */
+  --ds-good-bg: #e3f6ee;
+  --ds-good: #0e5a44;
+  --ds-warn-bg: #fff1d6;
+  --ds-warn: #7a4b00;
+  --ds-warn-line: #f6d891;
+  --ds-bad-bg: #ffe3e0;
+  --ds-bad: #9b1c12;
+  --ds-info-bg: #e6f8fe;
+  --ds-info: #075c80;
+  --ds-care-bg: #fde8f0;
+  --ds-care: #8a1c46;
+  --ds-care-dot: #f08a5d;
+  /* Status on dark surfaces */
+  --ds-good-on-ink: #8ff0c8;
+  --ds-bad-on-ink: #ffb3a1;
+  --ds-live: #4be3a3;
+
+  /* How new a kid is: the only color on a kid */
+  --ds-tenure-first: #ff3d8b;
+  --ds-tenure-week: #ff8a1f;
+  --ds-tenure-month: #f2b01e;
+  --ds-tenure-month-bg: #fdeec7;
+  --ds-tenure-month-ink: #6b4a00;
+  --ds-tenure-sixty: #8b5cf6;
+  --ds-tenure-sixty-bg: #ece4fe;
+  --ds-tenure-sixty-ink: #4b2a9e;
+
+  /* Data: categorical in fixed order, a de-emphasis gray, one sequential ramp */
+  --ds-data-1: #1557be;
+  --ds-data-2: #22bced;
+  --ds-data-muted: #c9d1e3;
+  --ds-data-goal: #2fb28b;
+  --ds-data-alert: #c2410c;
+  --ds-seq-1: #e3f6fd;
+  --ds-seq-2: #b4e7f8;
+  --ds-seq-3: #6fd0f1;
+  --ds-seq-4: #22aee0;
+  --ds-seq-5: #0b86b5;
+  --ds-seq-6: #075c80;
+
+  /* Station colors */
+  --ds-station-grip: #c2e6db;
+  --ds-station-wall: #c9eefa;
+  --ds-station-movement: #e2d9fc;
+  --ds-station-court: #ffe5b8;
+  --ds-station-course: #d9e3ff;
+
+  /* Type */
+  --ds-font-display: Argentum, "Work Sans", sans-serif;
+  --ds-font-body: "Work Sans", Arial, sans-serif;
+  --ds-text-display: clamp(40px, 5.6vw, 64px);
+  --ds-text-h1: 40px;
+  --ds-text-h2: 28px;
+  --ds-text-h3: 20px;
+  --ds-text-body: 16px;
+  --ds-text-small: 14px;
+  --ds-text-label: 12px;
+
+  /* Space (4-point) */
+  --ds-space-1: 4px;
+  --ds-space-2: 8px;
+  --ds-space-3: 12px;
+  --ds-space-4: 16px;
+  --ds-space-5: 20px;
+  --ds-space-6: 24px;
+  --ds-space-8: 32px;
+  --ds-space-10: 40px;
+  --ds-space-12: 48px;
+
+  /* Shape and depth */
+  --ds-radius-sm: 10px;
+  --ds-radius-md: 14px;
+  --ds-radius-lg: 20px;
+  --ds-radius-xl: 28px;
+  --ds-radius-pill: 999px;
+  --ds-shadow-sm: 0 1px 2px rgba(15, 14, 84, 0.05), 0 8px 24px -16px rgba(15, 14, 84, 0.2);
+  --ds-shadow-md: 0 2px 4px rgba(15, 14, 84, 0.05), 0 24px 44px -22px rgba(15, 14, 84, 0.38);
+
+  /* Motion */
+  --ds-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ds-fast: 0.15s;
+  --ds-slow: 0.4s;
+
+  /* Layout */
+  --ds-nav-h: 76px;
+  --ds-gutter: 12px;
+  --ds-content: 1236px;
+
+  /* Hit targets */
+  --ds-target: 44px;
+  --ds-target-lg: 52px;
+}

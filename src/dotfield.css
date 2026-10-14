@@ -1,0 +1,31 @@
+/* Ambient dot field (DotField.jsx). Fills its positioned parent. */
+
+.dot-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+  /* Keep the copy side quiet; the field lives behind the art. */
+  mask-image: linear-gradient(90deg, transparent 22%, color-mix(in srgb, var(--ds-black) 50%, transparent) 44%, var(--ds-black) 68%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 22%, color-mix(in srgb, var(--ds-black) 50%, transparent) 44%, var(--ds-black) 68%);
+}
+
+.dot-field.is-ready {
+  opacity: 1;
+}
+
+@media (max-width: 760px) {
+  .dot-field {
+    mask-image: linear-gradient(180deg, transparent 64%, var(--ds-black) 96%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 64%, var(--ds-black) 96%);
+  }
+}
+
+@media print {
+  .dot-field {
+    display: none;
+  }
+}

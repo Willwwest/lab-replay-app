@@ -1,42 +1,24 @@
-// LAB Replay: record a course run, pick the clip, coach it, and publish it
-// to the member's portfolio in the LAB app.
+// LAB Replay, for coaches on the gym floor: pick who's up, record, keep it,
+// next kid. Later: assign, check, send the good ones for analysis, coach
+// and share. Screens: Floor, Takes, a take, Board, Messages, and the camera.
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Camera,
-  Download,
-  Layers,
-  MessageSquare,
-  Play,
-  Timer,
-  Trash2,
-  Upload,
-} from "lucide-react";
-import {
-  Button,
-  IconButton,
-  SaveBar,
-  Section,
-  Stat,
-  StatStrip,
-} from "./ds/index.jsx";
-import { AppBar, Hero, Masthead, NextStep, Toast } from "./Shell.jsx";
-import TakeLibrary from "./TakeLibrary.jsx";
-import Capture from "./Capture.jsx";
-import { ClipCard, Player } from "./Player.jsx";
-import { CoachReview, TakeDetails } from "./CoachReview.jsx";
-import KeyFrames from "./KeyFrames.jsx";
-import CourseEditor from "./CourseEditor.jsx";
-import AttemptReview from "./AttemptReview.jsx";
-import PortfolioDelivery from "./PortfolioDelivery.jsx";
-import Requests from "./Requests.jsx";
-import RunView from "./RunView.jsx";
-import Compare from "./Compare.jsx";
-import { Spectate } from "./Team.jsx";
+import { Film, Home, MessageSquare, Trophy } from "lucide-react";
+import { SaveBar } from "./ds/index.jsx";
+import { AppBar, PageHead, Toast } from "./Shell.jsx";
+import CoachGate from "./CoachGate.jsx";
+import Floor from "./Floor.jsx";
+import Takes, { FILTERS } from "./Takes.jsx";
+import TakeScreen, { TABS } from "./TakeScreen.jsx";
+import Board from "./Board.jsx";
+import CaptureScreen from "./CaptureScreen.jsx";
+import KidPicker from "./KidPicker.jsx";
 import Messages, { useThreads } from "./Messages.jsx";
+import { Spectate } from "./Team.jsx";
 import {
+  COACHES,
   useAnalysis,
-  useCapture,
   useDraft,
+  useHere,
   useLibrary,
   usePortfolio,
   useRoster,
@@ -44,127 +26,132 @@ import {
   useToast,
   videoDuration,
 } from "./hooks.js";
-import { put } from "./storage.js";
+import { thumbnail } from "./camera.js";
+import { useRoute } from "./route.js";
+import { all, put } from "./storage.js";
+import { api } from "./service.js";
 import { pushRun, syncPending } from "./sync.js";
-import { buildAttempt } from "./attempts.js";
-import {
-  day,
-  download,
-  firstName,
-  reviewHtml,
-  stamp,
-  videoExtension,
-} from "./format.js";
-import { analysisFor, nextStep } from "./workflow.js";
+import { buildAttempt, progressFor } from "./attempts.js";
+import { download, firstName, reviewHtml, videoExtension } from "./format.js";
+import { runKey, createRun } from "./runs.js";
+import { takeStatus } from "./workflow.js";
 import "./replay.css";
+import "./coach.css";
 
-// Where each workflow step lives on the page.
-const ANCHOR = {
-  member: "take",
-  course: "course",
-  analysis: "clip",
-  coaching: "coaching",
-  attempt: "attempt",
-  portfolio: "portfolio",
+const SETTINGS = "replay-capture";
+const TEAM = "replay-team-id";
+const DEFAULTS = {
+  overlay: true,
+  countdown: true,
+  sound: true,
+  haptics: true,
+  rules: { timeCap: 0, failLimit: 0 },
 };
-
-function goTo(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.scrollIntoView({ block: "start" });
-  el.querySelector("input, select, textarea, button")?.focus({
-    preventScroll: true,
-  });
-}
+const read = (key, fallback) => {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const write = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+};
 
 export default function App() {
   const { toast, say, fail, clear } = useToast();
+  const roster = useRoster(fail);
+  if (!roster.coach)
+    return (
+      <>
+        <CoachGate coaches={COACHES} onChoose={roster.choose} />
+        <Toast toast={toast} onClose={clear} />
+      </>
+    );
+  return <Coaching roster={roster} toast={{ toast, say, fail, clear }} />;
+}
+
+function Coaching({ roster, toast: { toast, say, fail, clear } }) {
   const scrolled = useScrolled();
   const library = useLibrary(fail);
-  const roster = useRoster(fail);
-  const [view, setView] = useState("review");
-  const [selectedId, setSelectedId] = useState(null);
-  const [memberFilter, setMemberFilter] = useState("");
-  const [destination, setDestination] = useState("browser");
+  const here = useHere(roster);
+  const inbox = useThreads(roster.shared);
+  const { route, go } = useRoute();
+  const [upNext, setUpNext] = useState(null);
+  const [capture, setCapture] = useState(null); // { mode, team }
+  const [picker, setPicker] = useState(null); // { purpose, takeId }
+  const [courses, setCourses] = useState([]);
+  const [settings, setSettings] = useState(() => ({
+    ...DEFAULTS,
+    ...read(SETTINGS, {}),
+  }));
+  const [takesFilter, setTakesFilter] = useState(null);
+  const [teamId, setTeamId] = useState(
+    () => sessionStorage.getItem(TEAM) ?? "",
+  );
+  const [thread, setThread] = useState(null);
+  const [compareWith, setCompareWith] = useState(null);
+  const [boardVersion, setBoardVersion] = useState(0);
   const [now, setNow] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [loop, setLoop] = useState(false);
   const [url, setUrl] = useState("");
-  const [runBest, setRunBest] = useState(null);
-  const [compareWith, setCompareWith] = useState(null);
-  const inbox = useThreads(!!roster.account);
-  const [thread, setThread] = useState(null); // { memberId, runId }
-  const openThread = (memberId, runId) => {
-    setThread(memberId ? { memberId, runId } : null);
-    setTimeout(inbox.refresh, 600);
-  };
-  // ?team=CODE opens the spectator screen for a team run.
-  const [watch, setWatch] = useState(
-    () => new URLSearchParams(location.search).get("team") ?? "",
-  );
-  const go = (v) => {
-    if (watch) {
-      setWatch("");
-      history.replaceState(null, "", location.pathname);
-    }
-    setView(v);
-  };
   const video = useRef(null);
   const file = useRef(null);
+  const watch = new URLSearchParams(location.search).get("team") ?? "";
 
+  const selectedId = route.screen === "take" ? route.id : null;
   const take = library.takes.find((t) => t.id === selectedId) ?? null;
   const draft = useDraft(take, library.saveTake);
   const t = draft.view;
-  const takeJobs = useMemo(
+  const jobs = useMemo(
     () => library.jobs.filter((j) => j.takeId === selectedId),
     [library.jobs, selectedId],
   );
   const portfolio = usePortfolio(take);
   const analysis = useAnalysis(library, () =>
-    say("Analysis ready. Check the sampled frames and add your coaching."),
+    say("Analysis ready. See it with the coaching."),
   );
-  const done = t ? analysisFor(takeJobs, t.start, t.end) : null;
-  const step = t ? nextStep(t, takeJobs, portfolio.review) : null;
-  const queued = library.jobs.filter((j) => j.status === "queued").length;
+  const weekCount = library.jobs.filter(
+    (j) => Date.now() - Date.parse(j.requestedAt) < 7 * 864e5,
+  ).length;
+  const toAssign = library.takes.filter((x) => !x.memberId).length;
 
   const perform =
     (fn) =>
     async (...args) => {
       try {
-        await fn(...args);
+        return await fn(...args);
       } catch (e) {
         fail(e.message || "Something went wrong. Try again.");
       }
     };
 
-  const capture = useCapture({
-    onTake: (blob, name, hint) => perform(ingest)(blob, name, hint),
-    onError: fail,
-  });
-
-  // Share runs saved while the service was away once a coach connects.
+  const loadCourses = () =>
+    all("courses")
+      .then((c) =>
+        setCourses(c.sort((a, b) => b.savedAt.localeCompare(a.savedAt))),
+      )
+      .catch(() => {});
   useEffect(() => {
-    if (!roster.account) return;
+    loadCourses();
+  }, []);
+
+  useEffect(() => {
+    if (!roster.shared) return;
     syncPending().then(
       (n) =>
         n && say(`Shared ${n} saved run${n === 1 ? "" : "s"} with the team.`),
     );
   }, [roster.account?.id]);
 
-  // Sends an attempt to the service; on failure it stays local and pending.
-  async function share(attempt) {
-    if (!roster.account || !attempt.memberId) return;
-    try {
-      await pushRun(attempt);
-    } catch {
-      say("Saved on this device. It will be shared when the service is back.");
-    }
-  }
-
-  // Open the newest take once the library loads.
+  // The camera is a screen: back closes it, and it can't open on a reload.
   useEffect(() => {
-    if (library.ready) setSelectedId(library.takes[0]?.id ?? null);
-  }, [library.ready]);
+    if (route.screen !== "capture" && capture) setCapture(null);
+    if (route.screen === "capture" && !capture) go("floor", { replace: true });
+  }, [route.screen]);
 
   useEffect(() => {
     setNow(0);
@@ -174,26 +161,122 @@ export default function App() {
     return () => URL.revokeObjectURL(u);
   }, [take?.id, take?.blob]);
 
-  function select(id) {
+  // A clip sent for analysis on this device starts as soon as it's free.
+  useEffect(() => {
+    if (analysis.busy) return;
+    const next = library.jobs.find(
+      (j) => j.status === "queued" && j.destination === "browser",
+    );
+    if (next) analysis.run(next);
+  }, [library.jobs, analysis.busy]);
+
+  async function share(attempt) {
+    if (!roster.shared || !attempt?.memberId) return;
+    try {
+      await pushRun(attempt);
+    } catch {
+      say("Saved on this device. It will be shared when the service is back.");
+    }
+  }
+
+  function openCapture(mode, team = null) {
+    loadCourses();
+    setCapture({ mode, team });
+    go("capture");
+  }
+  const closeCapture = () => {
+    if (route.screen === "capture") history.back();
+    else setCapture(null);
+  };
+
+  function open(id, tab = "watch") {
     if (
       id !== selectedId &&
       draft.dirty &&
       !confirm("Discard your unsaved changes to this take?")
     )
       return;
-    setSelectedId(id);
-    setView("review");
+    go(`take/${id}/${tab}`);
   }
 
-  async function ingest(blob, name, hint) {
-    const duration = await videoDuration(blob, hint);
-    await draft.commit();
+  // Everything the camera keeps becomes a take; timed runs also save the
+  // scored attempt and share it.
+  async function saveCapture(result) {
+    const { takeId, kid, mode, course, run, attempt, blob, duration, burned } =
+      result;
+    const member = kid
+      ? { memberId: kid.id ?? kid.memberId, member: kid.name ?? kid.member }
+      : { memberId: "", member: "" };
+    if (attempt) {
+      await put("attempts", attempt);
+      await share(attempt);
+      if (capture?.team) await addToTeam(capture.team.id, attempt);
+    }
+    const next = {
+      id: takeId,
+      name: `${mode === "course" ? "Run" : "Take"} ${new Date().toLocaleTimeString()}`,
+      blob,
+      ...member,
+      course: mode === "course" ? run.course.name : "",
+      duration,
+      start: 0,
+      end: duration,
+      createdAt: new Date().toISOString(),
+      frames: [],
+      notes: "",
+      cue: "",
+      grade: "Not reviewed",
+      burned: !!burned,
+      thumb: await thumbnail(blob),
+      ...(mode === "course" && course
+        ? {
+            courseMap: {
+              name: course.name,
+              background: course.background ?? "/gym-layout.png",
+              layoutName: course.layoutName ?? "LAB gym layout",
+              version: 1,
+              points: course.points.map((p, i) => ({
+                ...p,
+                id: p.id ?? crypto.randomUUID(),
+                time: attempt?.obstacles[i]?.start ?? null,
+              })),
+            },
+            ...(attempt ? { attempt } : {}),
+          }
+        : {}),
+    };
+    await library.saveTake(next);
+    setBoardVersion((n) => n + 1);
+    return takeId;
+  }
+
+  async function addToTeam(id, attempt) {
+    const post = () =>
+      api(`/teams/${id}/result`, {
+        method: "POST",
+        body: JSON.stringify({ memberId: attempt.memberId, runId: attempt.id }),
+      });
+    try {
+      await post();
+    } catch {
+      try {
+        await pushRun(attempt);
+        await post();
+      } catch (e) {
+        fail(`Saved, but it couldn't join the team standings: ${e.message}`);
+      }
+    }
+  }
+
+  async function ingest(blob, name) {
+    const duration = await videoDuration(blob);
+    const kid = roster.members.find((m) => m.id === upNext);
     const next = {
       id: crypto.randomUUID(),
       name,
       blob,
-      member: roster.members.find((m) => m.id === memberFilter)?.name || "",
-      memberId: memberFilter,
+      member: kid?.name ?? "",
+      memberId: kid?.id ?? "",
       course: "",
       duration,
       start: 0,
@@ -203,14 +286,22 @@ export default function App() {
       notes: "",
       cue: "",
       grade: "Not reviewed",
+      thumb: await thumbnail(blob),
     };
     await library.saveTake(next);
-    setSelectedId(next.id);
-    setView("review");
-    say("Take saved as a draft. Set the clip when you're ready.");
+    say(kid ? `Imported for ${kid.name}.` : "Imported. Assign a kid in Takes.");
   }
 
-  // The course name is shared by the take and its course map.
+  async function assign(takeId, memberId) {
+    const stored = library.takes.find((x) => x.id === takeId);
+    const m = roster.members.find((x) => x.id === memberId);
+    if (!stored || !m) return;
+    const fields = { memberId: m.id, member: m.name };
+    await library.saveTake({ ...stored, ...fields });
+    if (takeId === selectedId) draft.patch(fields);
+    say(`Assigned to ${m.name}.`);
+  }
+
   const edit = (fields) =>
     draft.patch((d) =>
       "course" in fields && d.courseMap
@@ -252,130 +343,102 @@ export default function App() {
     });
   }
 
-  async function requestAnalysis() {
-    const saved = await commit();
-    const job = await analysis.request(saved, destination);
-    setView("requests");
-    scrollTo(0, 0);
-    say(
-      job.destination === "browser"
-        ? "Clip requested. Start it when this device is ready."
-        : "Request saved on this device. Download its manifest for a worker; no video was uploaded.",
-    );
-  }
-
-  async function saveAttempt(rows) {
-    const saved = await commit();
-    const attempt = buildAttempt(saved, rows, saved.start, saved.end);
-    await put("attempts", attempt);
-    await library.saveTake({ ...saved, attempt });
-    await share(attempt);
-  }
-
-  // A finished live run. Filmed runs become a take with the attempt on it,
-  // so Review opens with every obstacle already scored and timed.
-  async function saveRun({ attempt, run, blob, duration, course, burned }) {
-    await put("attempts", attempt);
-    await share(attempt);
-    if (!blob) return;
-    const take = {
-      id: attempt.takeId,
-      name: `Run ${new Date().toLocaleTimeString()}`,
-      blob,
-      member: attempt.member,
-      memberId: attempt.memberId,
-      course: run.course.name,
-      duration,
-      start: 0,
-      end: duration,
-      createdAt: attempt.createdAt,
-      frames: [],
-      notes: "",
-      cue: "",
-      grade: "Not reviewed",
-      // The timer is already in the picture; portfolio clips don't add one.
-      burned: !!burned,
-      ...(run.quick
-        ? {}
-        : {
-            courseMap: {
-              name: course.name,
-              background: course.background ?? "/gym-layout.png",
-              layoutName: course.layoutName ?? "LAB gym layout",
-              version: 1,
-              points: course.points.map((p, i) => ({
-                ...p,
-                id: p.id ?? crypto.randomUUID(),
-                time: attempt.obstacles[i].start,
-              })),
-            },
-            attempt,
-          }),
-    };
-    await library.saveTake(take);
-    say("Run saved. Its video is in the session library.");
-  }
-
-  async function deleteTake() {
-    if (
-      !confirm(
-        "Delete this take, its review and its finished requests from this device?",
+  const ops = {
+    jobs,
+    takes: library.takes,
+    shared: roster.shared,
+    portfolio,
+    analysis,
+    weekCount,
+    url,
+    video,
+    now,
+    setNow,
+    speed,
+    setSpeed: (s) => {
+      setSpeed(s);
+      if (video.current) video.current.playbackRate = s;
+    },
+    loop,
+    setLoop,
+    seek,
+    edit,
+    commit,
+    say,
+    fail,
+    compareWith,
+    setCompareWith,
+    back: () => go("takes"),
+    saveFrame: perform(saveFrame),
+    assign: () => setPicker({ purpose: "assign", takeId: selectedId }),
+    check: perform(async () => {
+      const saved = await commit();
+      await library.saveTake({
+        ...saved,
+        checked: {
+          start: saved.start,
+          end: saved.end,
+          by: roster.coach.name,
+          at: new Date().toISOString(),
+        },
+      });
+      say("Checked. It's ready to send for analysis.");
+    }),
+    uncheck: perform(async () => {
+      const saved = await commit();
+      await library.saveTake({ ...saved, checked: null });
+    }),
+    send: perform(async (destination) => {
+      const saved = await commit();
+      await analysis.request(saved, destination);
+      say(
+        destination === "browser"
+          ? "Sent. Analysis runs on this device."
+          : "Saved for a worker. Nothing was uploaded.",
+      );
+    }),
+    cancel: perform((job) => analysis.cancel(job)),
+    saveAttempt: async (rows) => {
+      const saved = await commit();
+      const attempt = buildAttempt(saved, rows, saved.start, saved.end);
+      await put("attempts", attempt);
+      await library.saveTake({ ...saved, attempt });
+      await share(attempt);
+    },
+    exportReview: () =>
+      download(
+        new Blob([reviewHtml(t, t.frames)], { type: "text/html" }),
+        "lab-replay-review.html",
+      ),
+    downloadOriginal: () =>
+      download(take.blob, `lab-take.${videoExtension(take.blob)}`),
+    message: () => {
+      setThread({ memberId: t.memberId, runId: t.attempt?.id });
+      go("messages");
+    },
+    remove: perform(async () => {
+      if (
+        !confirm(
+          "Delete this take, its review and its analysis from this device?",
+        )
       )
-    )
-      return;
-    await library.removeTake(take);
-    draft.discard();
-    setSelectedId(library.takes.find((x) => x.id !== take.id)?.id ?? null);
-    say("Take deleted.");
-  }
+        return;
+      await library.removeTake(take);
+      draft.discard();
+      go("takes", { replace: true });
+      say("Take deleted.");
+    }),
+  };
 
-  function onStep() {
-    if (step.target === "requests") return setView("requests");
-    goTo(ANCHOR[step.id]);
-  }
-
-  const hero = watch
-    ? {
-        eyebrow: `Team run · code ${watch.toUpperCase()}`,
-        title: ["Watch it", "live."],
-        lead: "The runner on course, their clock, and the standings, updated every second.",
-      }
-    : view === "messages"
-      ? {
-          eyebrow: "Messages",
-          title: ["Talk with", "families."],
-          lead: inbox.unread
-            ? `${inbox.unread} new message${inbox.unread === 1 ? "" : "s"} from families.`
-            : "Share a run, say what went well, answer questions. Families reply in the LAB app.",
-        }
-      : view === "run"
-        ? {
-            eyebrow: `Live run · ${day(new Date().toISOString())}`,
-            title: ["Time the run.", "Mark it live."],
-            lead: "Tap pass, fail or skip as each obstacle is cleared. Film it and the splits land on the video.",
-          }
-        : view === "requests"
-          ? {
-              eyebrow: "Analysis",
-              title: ["Only the clips", "you choose."],
-              lead: queued
-                ? `${queued} waiting. Each request keeps the clip you set when you asked.`
-                : "Nothing waiting. Request a clip from under a take's video.",
-            }
-          : t
-            ? {
-                eyebrow: `${day(t.createdAt)} · ${stamp(t.duration)} take`,
-                title: [
-                  t.member ? `${firstName(t.member)}'s` : "Unassigned",
-                  `${t.courseMap?.name || t.course || "take"}.`,
-                ],
-                lead: `Clip ${stamp(t.start)}–${stamp(t.end)} · ${t.grade} · ${t.frames.length} key frame${t.frames.length === 1 ? "" : "s"}`,
-              }
-            : {
-                eyebrow: `Replay · ${day(new Date().toISOString())}`,
-                title: ["Record the course.", "Coach the replay."],
-                lead: "Record or import a take. Nothing is analyzed until you choose a clip and ask for it.",
-              };
+  const tabOf = TABS.some((x) => x.value === route.tab) ? route.tab : "watch";
+  const filter =
+    takesFilter ??
+    (toAssign
+      ? "assign"
+      : library.takes.some((x) => FILTERS.check(x, takeStatus(x, library.jobs)))
+        ? "check"
+        : "all");
+  const screen = watch ? "watch" : route.screen;
 
   return (
     <div className="app">
@@ -383,342 +446,235 @@ export default function App() {
         scrolled={scrolled}
         roster={roster}
         nav={[
+          { id: "floor", label: "Floor", icon: Home },
           {
-            id: "review",
-            label: "Review",
-            icon: Play,
-            active: !watch && view === "review",
-            go: () => go("review"),
+            id: "takes",
+            label: "Takes",
+            icon: Film,
+            count: toAssign,
+            countLabel: `${toAssign} to assign`,
           },
-          {
-            id: "run",
-            label: "Run",
-            icon: Timer,
-            active: !watch && view === "run",
-            go: () => go("run"),
-          },
+          { id: "board", label: "Board", icon: Trophy },
           {
             id: "messages",
             label: "Messages",
             icon: MessageSquare,
             count: inbox.unread,
             countLabel: `${inbox.unread} new`,
-            active: !watch && view === "messages",
-            go: () => go("messages"),
           },
-          {
-            id: "requests",
-            label: "Requests",
-            icon: Layers,
-            count: queued,
-            active: !watch && view === "requests",
-            go: () => go("requests"),
-          },
-        ]}
-      />
-      <Masthead>
-        <Hero
-          {...hero}
-          aside={
-            watch ? null : view === "review" && step ? (
-              <NextStep step={step} onGo={onStep} />
-            ) : view === "run" && runBest ? (
-              <section className="cf-next" aria-label="Personal best">
-                <span className="eyebrow">Personal best</span>
-                <h2>{runBest.best.seconds.toFixed(1)}s</h2>
-                <p>
-                  {runBest.who.member} · {runBest.course} ·{" "}
-                  {day(runBest.best.createdAt)}
-                </p>
-              </section>
-            ) : null
-          }
-          actions={
+        ].map((n) => ({
+          ...n,
+          active:
             !watch &&
-            ["review", "requests"].includes(view) && (
-              <>
-                <Button
-                  variant={t ? "light" : "primary"}
-                  icon={Camera}
-                  disabled={capture.open}
-                  onClick={perform(capture.openCamera)}
-                >
-                  Record a take
-                </Button>
-                <Button
-                  variant="light"
-                  icon={Upload}
-                  onClick={() => file.current.click()}
-                >
-                  Import video
-                </Button>
-                <input
-                  ref={file}
-                  type="file"
-                  accept="video/*"
-                  hidden
-                  onChange={perform(async (e) => {
-                    const f = e.target.files[0];
-                    e.target.value = "";
-                    if (f) await ingest(f, f.name);
-                  })}
-                />
-              </>
-            )
-          }
+            (screen === n.id || (n.id === "takes" && screen === "take")),
+          go: () => {
+            if (watch) location.href = `${location.pathname}#/${n.id}`;
+            else go(n.id);
+          },
+        }))}
+      />
+
+      {screen === "watch" ? (
+        <>
+          <PageHead
+            eyebrow={`Team run · code ${watch.toUpperCase()}`}
+            title="Watch it live"
+            sub="The runner on course, their clock and the standings, every second."
+          />
+          <main className="rp-page">
+            <Spectate code={watch} connected={roster.shared} />
+          </main>
+        </>
+      ) : screen === "take" && t ? (
+        <TakeScreen
+          t={t}
+          take={take}
+          tab={tabOf}
+          onTab={(x) => go(`take/${t.id}/${x}`, { replace: true })}
+          ops={ops}
         />
-      </Masthead>
-
-      <main>
-        {capture.open && <Capture capture={capture} onError={fail} />}
-
-        {watch ? (
-          <Spectate code={watch} connected={!!roster.account} />
-        ) : view === "messages" ? (
-          <Messages
-            connected={!!roster.account}
-            members={roster.members}
-            threads={inbox.threads}
-            open={thread}
-            onOpen={openThread}
-            onSent={inbox.refresh}
-            onError={fail}
+      ) : screen === "take" ? (
+        <>
+          <PageHead
+            back="Takes"
+            onBack={() => go("takes")}
+            title="Take not found"
           />
-        ) : view === "run" ? (
-          <RunView
-            members={roster.members}
-            connected={!!roster.account}
-            takeCourse={t?.courseMap}
-            onSaveRun={saveRun}
-            onOpenTake={select}
-            onBest={setRunBest}
-            onSay={say}
-            onError={fail}
-            onSendRun={(attempt) => {
-              openThread(attempt.memberId, attempt.id);
-              go("messages");
-            }}
+          <main className="rp-page">
+            <p className="ds-note">
+              {library.ready ? "It isn't on this device." : "Opening…"}
+            </p>
+          </main>
+        </>
+      ) : screen === "takes" ? (
+        <Takes
+          takes={library.takes}
+          jobs={library.jobs}
+          ready={library.ready}
+          filter={filter}
+          onFilter={setTakesFilter}
+          onOpen={(id) => open(id)}
+          onAssign={(id) => setPicker({ purpose: "assign", takeId: id })}
+          onRecord={() => openCapture("record")}
+        />
+      ) : screen === "board" ? (
+        <Board
+          shared={roster.shared}
+          members={roster.members}
+          courses={courses}
+          teamId={teamId}
+          upNext={upNext}
+          version={boardVersion}
+          onTeam={(id) => {
+            setTeamId(id);
+            id
+              ? sessionStorage.setItem(TEAM, id)
+              : sessionStorage.removeItem(TEAM);
+          }}
+          onRun={(athlete, view) => {
+            setUpNext(athlete.memberId);
+            openCapture("course", {
+              id: view.id,
+              course: { name: view.course.name, points: view.course.points },
+              onLive: (state) =>
+                api(`/teams/${view.id}/live`, {
+                  method: "POST",
+                  body: JSON.stringify({
+                    memberId: athlete.memberId,
+                    ...state,
+                  }),
+                }).catch(() => {}),
+            });
+          }}
+          onSay={say}
+          onError={fail}
+        />
+      ) : screen === "messages" ? (
+        <>
+          <PageHead
+            eyebrow="Messages"
+            title="Families"
+            sub={
+              inbox.unread
+                ? `${inbox.unread} new from families.`
+                : "Share a run, say what went well. Families reply in the LAB app."
+            }
           />
-        ) : view === "requests" ? (
-          <Requests
-            jobs={library.jobs}
-            analysis={analysis}
-            onRun={analysis.run}
-            onCancel={analysis.cancel}
-            onOpen={select}
-            onError={fail}
-          />
-        ) : (
-          <>
-            <TakeLibrary
-              takes={library.takes}
-              jobs={library.jobs}
-              selectedId={selectedId}
-              onSelect={select}
+          <main className="rp-page">
+            <Messages
+              connected={roster.shared}
               members={roster.members}
-              memberFilter={memberFilter}
-              onMemberFilter={(id) => {
-                setMemberFilter(id);
-                const first = library.takes.find(
-                  (x) => !id || x.memberId === id,
-                );
-                if (first) select(first.id);
+              threads={inbox.threads}
+              open={thread}
+              onOpen={(memberId, runId) => {
+                setThread(memberId ? { memberId, runId } : null);
+                setTimeout(inbox.refresh, 600);
               }}
+              onSent={inbox.refresh}
+              onError={fail}
             />
-            {!library.ready && <p className="ds-note">Opening your library…</p>}
-            {t && (
-              <>
-                <StatStrip cols={3}>
-                  <Stat
-                    tone="sky"
-                    label="Clip"
-                    value={Math.max(0, t.end - t.start).toFixed(1)}
-                    unit="s"
-                  >
-                    <small>of a {t.duration.toFixed(1)}s take</small>
-                  </Stat>
-                  <Stat
-                    tone="mint"
-                    label="Tracking"
-                    value={done ? done.result.summary.coverage : "—"}
-                    unit={done ? "%" : undefined}
-                  >
-                    <small>
-                      {done ? "of sampled frames" : "Not analyzed yet"}
-                    </small>
-                  </Stat>
-                  <Stat
-                    tone="lavender"
-                    label="Key frames"
-                    value={t.frames.length}
-                  >
-                    <small>chosen for the member</small>
-                  </Stat>
-                </StatStrip>
+          </main>
+        </>
+      ) : (
+        <Floor
+          coach={roster.coach}
+          members={roster.members}
+          here={here}
+          upNext={upNext}
+          onUpNext={setUpNext}
+          takes={library.takes}
+          jobs={library.jobs}
+          onRecord={() => openCapture("record")}
+          onTimed={() => openCapture("course")}
+          onImport={() => file.current.click()}
+          onManageHere={() => setPicker({ purpose: "here" })}
+          onOpen={(id) => open(id)}
+          onAssign={(id) => setPicker({ purpose: "assign", takeId: id })}
+          onTakes={() => {
+            setTakesFilter("assign");
+            go("takes");
+          }}
+        />
+      )}
+      <input
+        ref={file}
+        type="file"
+        accept="video/*"
+        hidden
+        onChange={perform(async (e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          if (f) await ingest(f, f.name);
+        })}
+      />
 
-                <Section
-                  title="Video and coaching"
-                  note="Scrub to the moment, set the clip, then write what comes next."
-                  actions={
-                    <>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        icon={Download}
-                        onClick={() =>
-                          download(
-                            take.blob,
-                            `lab-take.${videoExtension(take.blob)}`,
-                          )
-                        }
-                      >
-                        Original video
-                      </Button>
-                      <IconButton
-                        label="Delete take"
-                        icon={Trash2}
-                        tone="danger"
-                        onClick={perform(deleteTake)}
-                      />
-                    </>
-                  }
-                >
-                  <div className="rp-review">
-                    <div className="rp-review-main">
-                      <Player
-                        url={url}
-                        take={t}
-                        videoRef={video}
-                        now={now}
-                        onTime={setNow}
-                        speed={speed}
-                        onSpeed={(s) => {
-                          setSpeed(s);
-                          if (video.current) video.current.playbackRate = s;
-                        }}
-                        loop={loop}
-                        onSeek={seek}
-                        onSaveFrame={perform(saveFrame)}
-                        onError={fail}
-                      />
-                      <div id="clip">
-                        <ClipCard
-                          take={t}
-                          now={now}
-                          onChange={edit}
-                          loop={loop}
-                          onLoop={setLoop}
-                          destination={destination}
-                          onDestination={setDestination}
-                          onRequest={perform(requestAnalysis)}
-                          analysis={done}
-                        />
-                      </div>
-                    </div>
-                    <div className="rp-review-side">
-                      <div id="take">
-                        <TakeDetails
-                          take={t}
-                          members={roster.members}
-                          onChange={edit}
-                        />
-                      </div>
-                      <div id="coaching">
-                        <CoachReview
-                          take={t}
-                          analysis={done}
-                          onChange={edit}
-                          onExport={() =>
-                            download(
-                              new Blob(
-                                [
-                                  reviewHtml(t, [
-                                    ...t.frames,
-                                    ...(done?.result.frames ?? []),
-                                  ]),
-                                ],
-                                { type: "text/html" },
-                              ),
-                              "lab-replay-review.html",
-                            )
-                          }
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </Section>
+      {capture && (
+        <CaptureScreen
+          kid={roster.members.find((m) => m.id === upNext) ?? null}
+          onKid={(m) => setUpNext(m?.id ?? null)}
+          members={roster.members}
+          here={here.ids}
+          courses={courses}
+          mode={capture.mode}
+          settings={settings}
+          onSettings={(s) => {
+            setSettings(s);
+            write(SETTINGS, s);
+          }}
+          bestFor={(memberId, course) => {
+            const key = runKey(createRun({ course }));
+            const stats = progressFor(
+              library.takes.map((x) => x.attempt).filter(Boolean),
+              memberId,
+              key,
+            );
+            return stats.best == null
+              ? null
+              : stats.history.find(
+                  (a) => a.completed && a.seconds === stats.best,
+                );
+          }}
+          onSave={saveCapture}
+          onClose={closeCapture}
+          onOpenTake={(id) => {
+            setCapture(null);
+            go(`take/${id}/watch`, { replace: true });
+          }}
+          team={capture.team}
+        />
+      )}
 
-                <div id="frames">
-                  <KeyFrames
-                    take={t}
-                    sampled={done?.result.frames ?? []}
-                    onChange={edit}
-                    onSeek={seek}
-                  />
-                </div>
-                <div id="compare">
-                  <Compare
-                    key={t.id}
-                    take={t}
-                    takes={library.takes}
-                    request={compareWith}
-                    onAddFrame={(frame) =>
-                      edit({ frames: [...t.frames, frame] })
-                    }
-                    onError={fail}
-                  />
-                </div>
-                <div id="course">
-                  <CourseEditor
-                    key={t.id}
-                    take={t}
-                    now={now}
-                    onChange={edit}
-                    onError={fail}
-                    onSay={say}
-                  />
-                </div>
-                <div id="attempt">
-                  <AttemptReview
-                    take={t}
-                    now={now}
-                    onSave={saveAttempt}
-                    onSeek={seek}
-                    canCompare={(id) =>
-                      !!id &&
-                      id !== t.id &&
-                      library.takes.some((x) => x.id === id)
-                    }
-                    onCompare={(id) => {
-                      setCompareWith({ id, n: Date.now() });
-                      goTo("compare");
-                    }}
-                  />
-                </div>
-                <div id="portfolio">
-                  <Section
-                    title="Member portfolio"
-                    note="Publish the clip, course map, coaching and key frames to the member's LAB portfolio. Families see it in the LAB app."
-                  >
-                    <PortfolioDelivery
-                      key={t.id}
-                      take={t}
-                      jobs={takeJobs}
-                      portfolio={portfolio}
-                      connected={!!roster.account}
-                      onCommit={commit}
-                      onSay={say}
-                    />
-                  </Section>
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </main>
+      {picker?.purpose === "here" && (
+        <KidPicker
+          members={roster.members}
+          here={here.ids}
+          mode="here"
+          title="Who's in the gym?"
+          note={
+            roster.shared
+              ? "Every coach's phone sees this list today."
+              : "Kept on this device today."
+          }
+          onToggle={(id, on) => here.set(id, on)}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {picker?.purpose === "assign" && (
+        <KidPicker
+          members={roster.members}
+          here={here.ids}
+          title="Whose take is this?"
+          current={library.takes.find((x) => x.id === picker.takeId)?.memberId}
+          onPick={perform(async (id) => {
+            setPicker(null);
+            await assign(picker.takeId, id);
+          })}
+          onClose={() => setPicker(null)}
+        />
+      )}
 
       <SaveBar
-        show={draft.dirty}
+        show={screen === "take" && draft.dirty}
         message={`Unsaved changes to ${t?.member ? `${firstName(t.member)}'s take` : "this take"}`}
         onSave={perform(async () => {
           await draft.commit();

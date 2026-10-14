@@ -433,106 +433,6 @@ summary,
   color: var(--ds-sky);
 }
 
-/* ---------- Hero: status and main action ---------- */
-
-.cf-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    "copy aside"
-    "actions aside";
-  column-gap: 40px;
-  align-items: center;
-}
-
-.cf-hero.no-aside {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "copy"
-    "actions";
-}
-
-.cf-hero-copy {
-  grid-area: copy;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
-  justify-items: start;
-  padding-top: 18px;
-  min-width: 0;
-}
-
-.cf-hero h1 {
-  font-family: var(--ds-font-display);
-  font-weight: 800;
-  font-size: var(--ds-text-display);
-  line-height: 1;
-  letter-spacing: -0.015em;
-  overflow-wrap: anywhere;
-}
-
-.cf-hero h1 em {
-  font-style: normal;
-  color: var(--ds-sky);
-}
-
-/* The lead always holds two lines (three on phones), so the hero keeps
-   its height when the next step swaps in a shorter or longer lead. */
-.cf-hero .lead {
-  font-size: 18px;
-  line-height: 1.45;
-  min-height: calc(2em * 1.45);
-  color: color-mix(in srgb, var(--ds-white) 86%, transparent);
-  max-width: 52ch;
-}
-
-.cf-hero-aside {
-  grid-area: aside;
-  justify-self: end;
-}
-
-.cf-hero-actions {
-  grid-area: actions;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  padding-top: var(--ds-space-6);
-}
-
-.cf-hero-actions .button {
-  min-height: 54px;
-  padding: 15px 28px;
-}
-
-/* The next step, as a glass card on the masthead. */
-.cf-next {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  width: min(380px, 100%);
-  padding: var(--ds-space-6);
-  border-radius: var(--ds-radius-xl);
-  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--ds-white) 18%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.cf-next h2 {
-  font-family: var(--ds-font-display);
-  font-size: 32px;
-  line-height: 1.05;
-}
-
-.cf-next p {
-  color: color-mix(in srgb, var(--ds-white) 82%, transparent);
-}
-
-.cf-next .button {
-  margin-top: var(--ds-space-3);
-}
-
 /* ============================================
    TYPE, BUTTONS, STAT TILES
    ============================================ */
@@ -765,20 +665,7 @@ main {
     gap: 14px;
     padding: 0 18px;
   }
-  .cf-hero {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "copy"
-      "aside"
-      "actions";
-    row-gap: 22px;
-  }
-  .cf-hero-aside {
-    justify-self: stretch;
-  }
-  .cf-next {
-    width: 100%;
-  }
+
   .chip-name {
     display: none;
   }
@@ -809,15 +696,7 @@ main {
   .outline-words {
     font-size: 96px;
   }
-  .cf-hero .lead {
-    font-size: 16px;
-  }
-  .cf-hero-actions {
-    padding-top: var(--ds-space-1);
-  }
-  .cf-hero-actions .button {
-    flex: 1 1 auto;
-  }
+
   .chip-select {
     min-height: var(--ds-target);
   }
@@ -886,13 +765,6 @@ main {
 }
 
 @media (max-width: 480px) {
-  /* Titles stay short on phones. */
-  .cf-hero h1 {
-    font-size: clamp(30px, 9.4vw, 40px);
-  }
-  .cf-hero .lead {
-    min-height: calc(3em * 1.45);
-  }
   .stat-value {
     font-size: 40px;
   }

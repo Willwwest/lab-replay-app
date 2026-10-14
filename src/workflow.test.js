@@ -35,24 +35,27 @@ test("a fresh take starts at the member step", () => {
   const step = nextStep({ ...base, memberId: "", courseMap: null }, [], null);
   assert.equal(step.id, "member");
   assert.equal(step.done, 0);
-  assert.equal(step.total, 5);
+  assert.equal(step.total, 6);
 });
 
 test("analysis must cover exactly the selected clip", () => {
   const other = { ...done, end: 2.5 };
   assert.equal(analysisFor([other], 1, 3), undefined);
   assert.equal(analysisFor([other, done], 1, 3), done);
-  assert.equal(nextStep(base, [other], null).id, "analysis");
+  assert.equal(nextStep(base, [other], null).id, "checked");
+  const checked = { ...base, checked: { start: 1, end: 3 } };
+  assert.equal(nextStep(checked, [other], null).id, "analysis");
 });
 
-test("a pending request points to the requests view", () => {
-  const step = nextStep(
-    base,
-    [{ ...done, status: "queued", requestedAt: "x" }],
-    null,
-  );
+test("a pending analysis shows as running or waiting", () => {
+  const checked = { ...base, checked: { start: 1, end: 3 } };
+  const step = nextStep(checked, [{ ...done, status: "queued" }], null);
   assert.equal(step.id, "analysis");
-  assert.equal(step.target, "requests");
+  assert.equal(step.title, "Analysis requested");
+  assert.equal(
+    nextStep(checked, [{ ...done, status: "running" }], null).title,
+    "Analysis running",
+  );
 });
 
 test("coaching needs an assessment and a cue", () => {
@@ -102,4 +105,20 @@ test("ready takes move through rendering to published", () => {
       (s) => s.done || s.optional,
     ),
   );
+});
+
+test("a moved clip needs checking again; status reads in one word", async () => {
+  const { isChecked, takeStatus } = await import("./workflow.js");
+  const checked = { ...base, checked: { start: 1, end: 3 } };
+  assert.ok(isChecked(checked));
+  assert.equal(isChecked({ ...checked, end: 3.5 }), false);
+  assert.equal(takeStatus({ ...base, memberId: "" }).id, "assign");
+  assert.equal(takeStatus(base).id, "check");
+  assert.equal(takeStatus(checked).id, "checked");
+  assert.equal(
+    takeStatus(checked, [{ ...done, takeId: "t1", status: "running" }]).id,
+    "analyzing",
+  );
+  assert.equal(takeStatus(base, [done]).id, "analyzed");
+  assert.equal(takeStatus({ ...base, portfolioId: "p" }, [done]).id, "shared");
 });

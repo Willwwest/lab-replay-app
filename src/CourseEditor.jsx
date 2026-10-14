@@ -214,8 +214,15 @@ export default function CourseEditor({ take, now, onChange, onError, onSay }) {
         </>
       }
       toolbar={
-        saved.length > 0 && (
-          <div className="rp-saved-course">
+        <div className="rp-course-pick">
+          <Field label="Course name">
+            <Input
+              value={take.course}
+              onChange={(course) => onChange({ course })}
+              placeholder="Course name or layout"
+            />
+          </Field>
+          {saved.length > 0 && (
             <Field label="Start from a saved course">
               <Select
                 value=""
@@ -226,8 +233,8 @@ export default function CourseEditor({ take, now, onChange, onError, onSay }) {
                 ]}
               />
             </Field>
-          </div>
-        )
+          )}
+        </div>
       }
     >
       <div className="rp-course">

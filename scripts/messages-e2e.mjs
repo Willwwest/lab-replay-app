@@ -1,19 +1,27 @@
-// Coach and family messages across both apps: a coach times a run and
-// sends it with a note from Replay; the parent reads it in the LAB app and
+// Coach and family messages across both apps: a coach times a run on the
+// camera and sends it with a note from the take's Share tab; the parent reads it in the LAB app and
 // replies; the reply reaches the coach live with an unread count; the kid
 // view can't write; another family sees nothing; a deleted message goes
 // from the parent's screen. Needs both dev servers and npm run service.
 //   node scripts/messages-e2e.mjs [output-folder]
 import { launch } from "./review-kit.mjs";
+import {
+  REPLAY,
+  SERVICE,
+  assert,
+  course as makeCourse,
+  fakeCamera,
+  fresh,
+  nav,
+  seedCourse,
+  serviceToken,
+  signIn,
+  wait,
+} from "./coach-kit.mjs";
 
-const REPLAY = "http://127.0.0.1:5180/";
 const MEMBER = "http://127.0.0.1:5173/";
-const SERVICE = "http://127.0.0.1:5182/replay-api";
+fakeCamera();
 const kit = await launch({ out: process.argv[2] ?? "test-results/messages" });
-const assert = (ok, msg) => {
-  if (!ok) throw Error(msg);
-};
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const stamp = Date.now();
 const runName = `Message run ${stamp % 10000}`;
 const note = `Great pace on the wall ${stamp % 10000}`;
@@ -22,43 +30,47 @@ const reply = `Thanks coach! ${stamp % 10000}`;
 // The coach, in Replay on a phone.
 const coach = await kit.page("phone", { label: "coach" });
 const c = coach.page;
+await coach.context.grantPermissions(["camera"]);
 c.setDefaultTimeout(15000);
 c.on("dialog", (d) => d.accept());
-await c.goto(REPLAY);
-await c.evaluate(() => {
-  sessionStorage.clear();
-  localStorage.removeItem("replay-run-setup");
-});
-await c.reload();
+const course = { ...makeCourse(stamp), name: runName };
+await fresh(c, REPLAY);
+await signIn(c, "Coach Jordan");
+await seedCourse(c, course);
 
-await coach.h.step("time a quick run for Theo; it's shared", async () => {
-  await c.locator(".chip-select").click();
-  await c.getByRole("menuitemradio", { name: "Coach Jordan" }).click();
-  await c.locator(".avatar", { hasText: "CJ" }).waitFor();
-  await c.locator(".primary-nav .nav-item", { hasText: "Run" }).click();
-  await c.getByLabel("Who's running").selectOption("theo");
-  await c.getByLabel("Course", { exact: true }).selectOption("quick");
-  await c.getByLabel("What are you timing?").fill(runName);
-  const box = c.getByRole("switch", { name: "3-2-1 countdown" });
-  if (await box.isChecked()) await box.locator("..").click();
-  await c.getByRole("button", { name: "Start the run" }).click();
-  await c.getByRole("button", { name: "Go" }).click();
-  await wait(600);
-  await c.getByRole("button", { name: "Finish" }).click();
-  await c.getByRole("button", { name: "Save run" }).click();
-  await c.getByRole("button", { name: "Next athlete" }).click();
+await coach.h.step("time Theo on the camera; the take opens", async () => {
+  await c.getByRole("button", { name: "Timed course" }).click();
+  await c.getByRole("button", { name: /^No kid picked/ }).click();
   await c
-    .locator(".rp-run-row", { hasText: runName })
-    .getByRole("button", { name: "Send to family" })
-    .waitFor();
+    .getByRole("dialog", { name: "Who's running?" })
+    .getByRole("button", { name: /Theo Parker/ })
+    .first()
+    .click();
+  await c.getByRole("button", { name: "Capture settings" }).click();
+  const settings = c.getByRole("dialog", { name: "Capture settings" });
+  await settings.getByLabel("Course", { exact: true }).selectOption(course.id);
+  const box = settings.getByRole("switch", { name: "3-2-1 countdown" });
+  if (await box.isChecked()) await box.locator("..").click();
+  await settings.getByRole("button", { name: "Done" }).click();
+  await c.getByRole("button", { name: "Start the run" }).click();
+  for (let i = 0; i < course.points.length; i++) {
+    await wait(300);
+    await c.locator(".rp-key-pass").click();
+  }
+  await c.getByRole("heading", { name: /^Clean run in/ }).waitFor();
+  await c.getByLabel("Recording of this run").waitFor({ timeout: 15000 });
+  await c.getByRole("button", { name: "Keep", exact: true }).click();
+  await c.getByRole("button", { name: "Open take" }).click();
+  await c.getByRole("heading", { name: "Theo Parker" }).waitFor();
 });
 
 await coach.h.step(
-  "Send to family opens Theo's thread with the run attached",
+  "Write on the Share tab opens Theo's thread with the run attached",
   async () => {
+    await c.getByRole("radio", { name: "Share", exact: true }).click();
     await c
-      .locator(".rp-run-row", { hasText: runName })
-      .getByRole("button", { name: "Send to family" })
+      .getByRole("region", { name: "Family" })
+      .getByRole("button", { name: "Write" })
       .click();
     const thread = c.getByRole("region", { name: "Conversation" });
     await thread.getByRole("heading", { name: "Theo Parker" }).waitFor();
@@ -133,7 +145,7 @@ await parent.h.shot("parent-messages", { full: true });
 await coach.h.step(
   "the reply shows as new for the coach, then as read",
   async () => {
-    await c.locator(".primary-nav .nav-item", { hasText: "Review" }).click();
+    await nav(c, "Floor");
     await c
       .locator(".primary-nav .nav-item", { hasText: "Messages" })
       .locator(".nav-count")
@@ -208,15 +220,7 @@ coach.h.errors("coach");
 parent.h.errors("parent");
 
 // Clean up: this test's messages and run.
-const token = (
-  await (
-    await fetch(`${SERVICE}/session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: "+16025550150" }),
-    })
-  ).json()
-).token;
+const token = await serviceToken();
 const auth = { Authorization: `Bearer ${token}` };
 const { messages } = await (
   await fetch(`${SERVICE}/threads/theo`, { headers: auth })

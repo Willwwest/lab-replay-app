@@ -13,6 +13,7 @@ import {
 } from "./ds/index.jsx";
 import { api } from "./service.js";
 import { day, seconds } from "./format.js";
+import "./board.css";
 
 const PERIODS = [
   { value: "week", label: "This week" },

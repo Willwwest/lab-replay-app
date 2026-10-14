@@ -19,6 +19,7 @@ import {
 } from "./teams.js";
 import { threads, validateMessage } from "./messages.js";
 import { findFont, timerFilters } from "./overlay.js";
+import { validateHere } from "./here.js";
 const root = path.dirname(fileURLToPath(import.meta.url)),
   data = path.resolve(
     process.env.REPLAY_DATA_DIR || path.join(root, "../data"),
@@ -29,7 +30,7 @@ const roster = JSON.parse(
 );
 const db = new DatabaseSync(path.join(data, "replay.sqlite"));
 db.exec(
-  `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS assets(id TEXT PRIMARY KEY,owner TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,status TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,member TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reads(account TEXT NOT NULL,member TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(account,member)); CREATE TABLE IF NOT EXISTS teams(id TEXT PRIMARY KEY,code TEXT NOT NULL,status TEXT NOT NULL,updated INTEGER NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,course_key TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL);`,
+  `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS assets(id TEXT PRIMARY KEY,owner TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,status TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS here(date TEXT NOT NULL,member TEXT NOT NULL,by TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(date,member)); CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,member TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reads(account TEXT NOT NULL,member TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(account,member)); CREATE TABLE IF NOT EXISTS teams(id TEXT PRIMARY KEY,code TEXT NOT NULL,status TEXT NOT NULL,updated INTEGER NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,course_key TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL);`,
 );
 db.exec(`UPDATE reviews SET status='failed' WHERE status='rendering'`);
 const sessions = new Map();
@@ -264,6 +265,35 @@ const server = http.createServer(async (req, res) => {
         200,
         boardFor(account, leaderboard(allRuns(), course, period)),
       );
+    }
+    // Who's in the gym today, shared by every coach's phone.
+    if (route === "/here") {
+      if (account.kind !== "staff")
+        return send(res, 403, { error: "Coach access required." });
+      if (req.method === "GET") {
+        const date = url.searchParams.get("date") ?? "";
+        return send(
+          res,
+          200,
+          db
+            .prepare("SELECT member,by,at FROM here WHERE date=? ORDER BY at")
+            .all(date)
+            .map((r) => ({ memberId: r.member, by: r.by, at: r.at })),
+        );
+      }
+      if (req.method === "POST") {
+        const h = validateHere(await json(req), roster.members);
+        if (h.here)
+          db.prepare(
+            "INSERT INTO here VALUES(?,?,?,?) ON CONFLICT(date,member) DO NOTHING",
+          ).run(h.date, h.memberId, account.name, new Date().toISOString());
+        else
+          db.prepare("DELETE FROM here WHERE date=? AND member=?").run(
+            h.date,
+            h.memberId,
+          );
+        return send(res, 200, h);
+      }
     }
     // Messages: one thread per kid, between coaches and that kid's family.
     if (route === "/threads" && req.method === "GET")

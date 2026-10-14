@@ -1,4 +1,4 @@
-// Who the take belongs to, and the coach's assessment of it.
+// The coach's assessment of a take.
 import React from "react";
 import { Download } from "lucide-react";
 import {
@@ -6,60 +6,12 @@ import {
   Card,
   CardHead,
   Field,
-  Input,
   Select,
   Tag,
   TextArea,
 } from "./ds/index.jsx";
 import { seconds } from "./format.js";
 import { GRADES } from "./workflow.js";
-
-export function TakeDetails({ take, members, onChange }) {
-  return (
-    <Card
-      as="section"
-      pad="md"
-      aria-label="Take details"
-      className="rp-details"
-    >
-      <Field
-        label="Member"
-        hint={
-          members.length ? undefined : "Connect the roster to pick a member."
-        }
-      >
-        {members.length ? (
-          <Select
-            value={take.memberId || ""}
-            onChange={(id) =>
-              onChange({
-                memberId: id,
-                member: members.find((m) => m.id === id)?.name || "",
-              })
-            }
-            options={[
-              { value: "", label: "Assign to a member" },
-              ...members.map((m) => ({ value: m.id, label: m.name })),
-            ]}
-          />
-        ) : (
-          <Input
-            value={take.member}
-            onChange={(member) => onChange({ member })}
-            placeholder="Member name"
-          />
-        )}
-      </Field>
-      <Field label="Course">
-        <Input
-          value={take.course}
-          onChange={(course) => onChange({ course })}
-          placeholder="Course name or layout"
-        />
-      </Field>
-    </Card>
-  );
-}
 
 export function CoachReview({ take, analysis, onChange, onExport }) {
   const summary = analysis?.result?.summary;

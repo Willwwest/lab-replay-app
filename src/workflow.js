@@ -44,6 +44,27 @@ export const attemptMatches = (take) =>
   take.attempt.end === take.end &&
   take.attempt.memberId === take.memberId;
 
+// A coach has watched the clip they set and confirmed it's usable. Moving
+// the clip afterwards un-checks it: what's analyzed is what was checked.
+export const isChecked = (take) =>
+  !!take.checked &&
+  take.checked.start === take.start &&
+  take.checked.end === take.end;
+
+// Where a take is, in one word, for lists: who it belongs to first, then
+// whether it's been checked, analyzed and shared.
+export function takeStatus(take, jobs = []) {
+  const own = jobs.filter((j) => j.takeId === take.id);
+  if (!take.memberId) return { id: "assign", label: "To assign", tone: "warn" };
+  if (own.some((j) => ["queued", "running"].includes(j.status)))
+    return { id: "analyzing", label: "Analyzing", tone: "info" };
+  if (take.portfolioId) return { id: "shared", label: "Shared", tone: "good" };
+  if (analysisFor(own, take.start, take.end))
+    return { id: "analyzed", label: "Analyzed", tone: "good" };
+  if (isChecked(take)) return { id: "checked", label: "Checked", tone: "info" };
+  return { id: "check", label: "To check", tone: "outline" };
+}
+
 // Each step: id (also the section it lives in), label, done, and for the
 // optional attempt step, whether a stale saved attempt blocks the portfolio.
 export function steps(take, jobs, review) {
@@ -53,17 +74,22 @@ export function steps(take, jobs, review) {
     !["Not reviewed", "Not assessable"].includes(take.grade) &&
     !!take.cue?.trim();
   return [
-    { id: "member", label: "Assign a member", done: !!take.memberId },
+    { id: "member", label: "Assign a kid", done: !!take.memberId },
     {
-      id: "course",
-      label: "Draw the course",
-      done: (take.courseMap?.points?.length ?? 0) >= 2,
+      id: "checked",
+      label: "Check the recording",
+      done: isChecked(take) || !!analysis,
     },
     {
       id: "analysis",
       label: "Analyze this clip",
       done: !!analysis,
       pending: pending?.status,
+    },
+    {
+      id: "course",
+      label: "Draw the course",
+      done: (take.courseMap?.points?.length ?? 0) >= 2,
     },
     { id: "coaching", label: "Write the coaching", done: coached },
     {
@@ -89,9 +115,14 @@ export function portfolioBlockers(take, jobs) {
 
 const COPY = {
   member: {
-    title: "Assign a member",
+    title: "Assign a kid",
     lead: "Pick who this take belongs to. Their portfolio is where it ends up.",
-    action: "Choose a member",
+    action: "Choose a kid",
+  },
+  checked: {
+    title: "Check the recording",
+    lead: "Trim it to the run and make sure it's usable before it goes for analysis.",
+    action: "Check it",
   },
   course: {
     title: "Draw the course",
@@ -100,8 +131,8 @@ const COPY = {
   },
   analysis: {
     title: "Analyze the clip",
-    lead: "Set the clip, then request analysis. Only that interval is processed.",
-    action: "Set the clip",
+    lead: "Send the checked clip for analysis. Only that interval is processed.",
+    action: "Send for analysis",
   },
   coaching: {
     title: "Write the coaching",
@@ -143,9 +174,8 @@ export function nextStep(take, jobs, review) {
       lead:
         step.pending === "running"
           ? "Sampling the clip on this device. You can keep coaching meanwhile."
-          : "The request is waiting in Requests. Start it when this device is ready.",
-      action: "Open requests",
-      target: "requests",
+          : "It starts as soon as this device finishes the one before it.",
+      action: "Open the analysis",
     };
   if (step.id === "portfolio" && review?.status === "rendering")
     copy = {

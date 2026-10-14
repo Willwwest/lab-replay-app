@@ -26,6 +26,11 @@ test("invalid and unassigned clips cannot enter the queue", () => {
     assert.throws(() => requestJob(take, s, e, []));
   assert.throws(() => requestJob({ ...take, member: "" }, 0, 5, []));
   assert.throws(() => requestJob({ ...take, blob: null }, 0, 5, []));
+  // A plain recording has no course; it can still be analyzed.
+  assert.equal(
+    requestJob({ ...take, course: "" }, 0, 5, []).course,
+    "Recording",
+  );
 });
 test("duplicate jobs blocked while active or completed; cancelled requests can be retried", () => {
   const j = requestJob(take, 0, 5, []);

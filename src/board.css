@@ -1,0 +1,92 @@
+/* ============================================
+   LAB REPLAY · LEADERBOARD
+   Ranked rows with place chips. Tokens only.
+   ============================================ */
+
+/* ---------- Leaderboard ---------- */
+.rp-ranks-pick {
+  width: min(360px, 100%);
+}
+.rp-ranks-pick .ds-select select {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+}
+.rp-ranks {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-ranks li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-5);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+  box-shadow: var(--ds-shadow-sm);
+}
+.rp-ranks li.is-next {
+  border-left: 5px solid var(--ds-cyan);
+  background: linear-gradient(90deg, var(--ds-info-bg), var(--ds-white) 60%);
+}
+.rp-ranks-rank {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 36px;
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-surface-muted);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-text-2);
+}
+.rp-ranks-rank-1 {
+  background: var(--ds-gold);
+  color: var(--ds-ink);
+}
+.rp-ranks-rank-2 {
+  background: var(--ds-gray-300);
+  color: var(--ds-ink);
+}
+.rp-ranks-rank-3 {
+  background: var(--ds-tenure-week);
+  color: var(--ds-white);
+}
+.rp-ranks-name {
+  display: grid;
+  min-width: 0;
+}
+.rp-ranks-name b {
+  color: var(--ds-navy);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-ranks-name small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-3);
+}
+.rp-ranks-time {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--ds-navy);
+}
+
+@media (max-width: 480px) {
+  .rp-ranks li {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    padding: var(--ds-space-3);
+  }
+  .rp-ranks-tag {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .rp-ranks-tag:empty {
+    display: none;
+  }
+}

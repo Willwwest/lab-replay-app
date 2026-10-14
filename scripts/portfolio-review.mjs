@@ -1,10 +1,12 @@
-// Course-to-portfolio, end to end: roster, map, attempt, analysis, render,
-// preview, publish, family-app playback, family isolation and withdrawal.
+// Course-to-portfolio, end to end on one take: import, assign, map, attempt,
+// coaching, the check-and-send gate for analysis, render, preview, publish,
+// family-app playback, family isolation and withdrawal.
 // Needs Replay (npm run dev), the member app on 5173 and npm run service.
 //   node scripts/portfolio-review.mjs
 import { chromium } from "@playwright/test";
 import assert from "node:assert/strict";
 import { writeFile } from "node:fs/promises";
+import { REPLAY, fresh, signIn, stored } from "./coach-kit.mjs";
 
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const context = await browser.newContext({
@@ -14,23 +16,52 @@ const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 const portfolio = () => page.locator(".rp-portfolio");
+const tab = (name) => page.getByRole("radio", { name, exact: true }).click();
+async function saveDraft() {
+  await page
+    .getByRole("region", { name: "Unsaved changes" })
+    .getByRole("button", { name: "Save", exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Unsaved changes" })
+    .waitFor({ state: "detached" });
+}
 
 try {
-  await page.goto("http://127.0.0.1:5180");
-  await page.locator(".chip-select").click();
-  await page.getByRole("menuitemradio", { name: "Coach Jordan" }).click();
-  await page.getByLabel("Member", { exact: true }).selectOption("theo");
+  await fresh(page, REPLAY);
+  await signIn(page, "Coach Jordan");
+
+  // Import from the Floor, then open it from Today and assign Theo.
   await page
     .locator("input[type=file]")
     .first()
     .setInputFiles("test-results/sample.mp4");
-  await page.getByRole("heading", { name: "Course map" }).waitFor();
+  await page.getByText("1 take to assign").waitFor();
+  await page
+    .getByRole("list", { name: "Today's takes" })
+    .getByRole("button", { name: /^No kid yet/ })
+    .click();
+  await page.getByRole("button", { name: "Assign a kid" }).click();
+  await page
+    .getByRole("dialog", { name: "Whose take is this?" })
+    .getByRole("button", { name: /Theo Parker/ })
+    .first()
+    .click();
+  await page.getByRole("heading", { name: "Theo Parker" }).waitFor();
   assert.equal(
-    await page.locator("#take select").inputValue(),
+    (await stored(page))[0].memberId,
     "theo",
-    "a new take belongs to the chosen member",
+    "the take belongs to the chosen kid",
   );
-  await page.getByLabel("Course", { exact: true }).fill("LAB circuit");
+
+  // Watch: trim, check, and confirm the send.
+  await page.getByLabel("Clip start (seconds)").fill("1");
+  await page.getByLabel("Clip end (seconds)").fill("3");
+  await saveDraft();
+
+  // Course: name it, map two points, save the course, score the attempt.
+  await tab("Course");
+  await page.getByLabel("Course name", { exact: true }).fill("LAB circuit");
   assert.equal(
     await page.locator(".rp-map image").getAttribute("href"),
     "/gym-layout.png",
@@ -42,20 +73,7 @@ try {
   await map.click({ position: { x: box.width * 0.45, y: box.height * 0.42 } });
   await page.getByLabel("Point 2 label").fill("Course lanes");
   await page.getByRole("button", { name: "Save course", exact: true }).click();
-  await page
-    .getByLabel("Assessment", { exact: true })
-    .selectOption("Consistent");
-  await page.getByLabel("What went well").fill("Controlled finish.");
-  await page
-    .getByLabel("Focus for the next attempt")
-    .fill("Settle your feet before moving on.");
-  await page.getByLabel("Clip start").fill("1");
-  await page.getByLabel("Clip end").fill("3");
-  await page
-    .getByRole("region", { name: "Unsaved changes" })
-    .getByRole("button", { name: "Save", exact: true })
-    .click();
-
+  await saveDraft();
   for (const n of [1, 2])
     await page
       .getByRole("radiogroup", { name: `Obstacle ${n} result` })
@@ -64,23 +82,41 @@ try {
   await page.getByRole("button", { name: "Save attempt", exact: true }).click();
   await page.getByText("Attempt saved.", { exact: true }).waitFor();
 
+  // Coach: the assessment and the cue.
+  await tab("Coach");
+  await page
+    .getByLabel("Assessment", { exact: true })
+    .selectOption("Consistent");
+  await page.getByLabel("What went well").fill("Controlled finish.");
+  await page
+    .getByLabel("Focus for the next attempt")
+    .fill("Settle your feet before moving on.");
+  await saveDraft();
+
+  // Share: nothing to prepare before the recording is checked and analyzed.
+  await tab("Share");
   const prepare = portfolio().getByRole("button", {
     name: "Prepare portfolio clip",
   });
   assert.ok(await prepare.isDisabled(), "no portfolio before analysis");
+  await portfolio().getByText("Check the recording").waitFor();
   await portfolio().getByText("Analyze this clip").waitFor();
 
-  await page.getByRole("button", { name: "Request analysis" }).click();
-  await page.getByRole("button", { name: "Start analysis" }).click();
+  await tab("Watch");
+  for (const l of [
+    /trimmed to the run/,
+    /in frame from start/,
+    /Steady and close/,
+  ])
+    await page.getByRole("checkbox", { name: l }).check();
+  await page.getByRole("button", { name: "Mark as checked" }).click();
+  await page.getByRole("button", { name: "Send for analysis…" }).click();
+  await page.getByRole("button", { name: "Send the 2.0s clip" }).click();
   await page
-    .locator(".rp-job em", { hasText: /^(Completed|Failed)$/ })
-    .first()
-    .waitFor({ timeout: 90000 });
-  assert.equal(
-    await page.locator(".rp-job em").first().innerText(),
-    "Completed",
-  );
-  await page.getByRole("button", { name: "Open take" }).click();
+    .getByRole("heading", { name: "Analyzed" })
+    .waitFor({ timeout: 120000 });
+
+  await tab("Share");
   await prepare.click();
   const publish = page.getByRole("button", {
     name: "Publish to member portfolio",
@@ -202,7 +238,7 @@ try {
     { method: "DELETE", ...as(coach) },
   );
   console.log(
-    "PASS: roster association, supplied map, course route, attempt, analysis prerequisite, clipped overlay render, preview, publication, family isolation, family app playback, withdrawal, responsive layouts.",
+    "PASS: import and assign, supplied map, course route, attempt, coaching, check-and-send before analysis, clipped overlay render, preview, publication, family isolation, family app playback, withdrawal, responsive layouts.",
   );
 } catch (e) {
   console.error(await page.locator("main").innerText());

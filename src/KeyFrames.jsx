@@ -1,10 +1,9 @@
 // Stills the coach chose, with a note each, and the frames analysis sampled.
 import React from "react";
-import { Bookmark, Images, Trash2 } from "lucide-react";
+import { Bookmark, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
-  Empty,
   Field,
   IconButton,
   Section,
@@ -23,11 +22,9 @@ export default function KeyFrames({ take, sampled, onChange, onSeek }) {
       note="Pause on a useful moment and save the frame. Notes go to the member with the review."
     >
       {!kept.length && !fresh.length ? (
-        <Card>
-          <Empty icon={Images} title="No key frames yet">
-            Use Save frame under the video.
-          </Empty>
-        </Card>
+        <p className="rp-inline">
+          None yet. Pause on a moment and tap Save frame under the video.
+        </p>
       ) : (
         <div className="rp-frames">
           {kept.map((f) => (

@@ -66,88 +66,13 @@
 }
 
 /* Fields sitting on the page, not in a card, need their own surface. */
-.rp-library-member .ds-select select,
-.rp-saved-course .ds-select select {
+
+.rp-course-pick .ds-select select,
+.rp-course-pick .ds-input {
   background: var(--ds-surface);
   border-color: var(--ds-border-strong);
 }
 
-/* ---------- Session library ---------- */
-.rp-library-member {
-  width: min(280px, 100%);
-}
-.rp-takes {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 260px);
-  gap: var(--ds-space-3);
-  overflow-x: auto;
-  padding: var(--ds-space-1) var(--ds-space-1) var(--ds-space-3);
-  margin: calc(-1 * var(--ds-space-1));
-  scroll-snap-type: x proximity;
-}
-.rp-take {
-  display: grid;
-  gap: var(--ds-space-1);
-  align-content: start;
-  padding: var(--ds-space-4) var(--ds-space-5);
-  border-radius: var(--ds-radius-lg);
-  background: var(--ds-surface);
-  border: 1px solid var(--ds-border);
-  box-shadow: var(--ds-shadow-sm);
-  border-left: 5px solid transparent;
-  text-align: left;
-  scroll-snap-align: start;
-  transition:
-    box-shadow var(--ds-fast),
-    transform var(--ds-fast) var(--ds-ease);
-}
-.rp-take[aria-current="true"] {
-  border-left-color: var(--ds-cyan);
-  background: linear-gradient(90deg, var(--ds-info-bg), var(--ds-white) 70%);
-}
-.rp-take-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--ds-space-1);
-  color: var(--ds-text-3);
-}
-.rp-take b {
-  font-size: var(--ds-text-body);
-  color: var(--ds-navy);
-}
-.rp-take-meta {
-  font-size: var(--ds-text-small);
-  color: var(--ds-text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ---------- Camera ---------- */
-.rp-capture-video {
-  width: 100%;
-  max-height: 62vh;
-  border-radius: var(--ds-radius-md);
-  background: var(--ds-black);
-  object-fit: contain;
-}
-
-/* ---------- Video and coaching ---------- */
-.rp-review {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-  gap: var(--ds-space-5);
-  align-items: start;
-}
-.rp-review-main,
-.rp-review-side {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--ds-space-5);
-  min-width: 0;
-}
 .rp-video {
   overflow: hidden;
   border-radius: var(--ds-radius-md);
@@ -221,15 +146,6 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ds-space-4);
 }
-.rp-request {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--ds-space-3);
-  padding-top: var(--ds-space-4);
-  border-top: 1px solid var(--ds-border);
-}
 
 /* Coach review */
 .rp-coach > .button {
@@ -280,8 +196,14 @@
 }
 
 /* ---------- Course map ---------- */
-.rp-saved-course {
-  width: min(320px, 100%);
+.rp-course-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-course-pick .ds-field {
+  flex: 1 1 220px;
+  max-width: 320px;
 }
 .rp-course {
   display: grid;
@@ -321,8 +243,7 @@
 }
 .rp-route,
 .rp-obstacles,
-.rp-history,
-.rp-jobs {
+.rp-history {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--ds-space-3);
@@ -417,61 +338,9 @@
   background: var(--ds-black);
 }
 
-/* ---------- Requests ---------- */
-.rp-job {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-.rp-job-main {
-  display: grid;
-  gap: var(--ds-space-2);
-  min-width: 0;
-}
-.rp-job-course {
-  color: var(--ds-text-2);
-}
-.rp-meter {
-  display: grid;
-  gap: var(--ds-space-1);
-}
-.rp-meter progress {
-  width: 100%;
-  height: 10px;
-  appearance: none;
-  border: 0;
-  border-radius: var(--ds-radius-pill);
-  overflow: hidden;
-  background: var(--ds-gray-100);
-  accent-color: var(--ds-cyan);
-}
-.rp-meter progress::-webkit-progress-bar {
-  background: var(--ds-gray-100);
-}
-.rp-meter progress::-webkit-progress-value {
-  background: var(--ds-cyan);
-}
-.rp-meter progress::-moz-progress-bar {
-  background: var(--ds-cyan);
-}
-
 /* ---------- Hover (mouse only) ---------- */
-@media (hover: hover) and (pointer: fine) {
-  .rp-take:hover {
-    box-shadow: var(--ds-shadow-md);
-    transform: translateY(-1px);
-  }
-}
 
 /* ---------- Narrower screens ---------- */
-@media (max-width: 1100px) {
-  .rp-review {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .rp-review-side {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-}
 
 @media (max-width: 900px) {
   .rp-course {
@@ -483,9 +352,6 @@
   .rp-map {
     max-height: 60vh;
   }
-  .rp-job {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 760px) {
@@ -493,7 +359,7 @@
     font-size: var(--ds-text-body);
     padding-left: var(--ds-space-2);
   }
-  .rp-review-side,
+
   .rp-clip-bounds {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -506,11 +372,5 @@
   }
   .rp-transport {
     justify-content: flex-start;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rp-take {
-    transition: none;
   }
 }

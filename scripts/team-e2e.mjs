@@ -1,17 +1,24 @@
 // Team runs across devices: a coach picks the running order and runs each
 // athlete; a second screen watches through the spectator link and sees the
-// runner on course, the clock moving, each mark, and the standings. Needs
-// npm run dev and npm run service.
+// runner on course, the clock moving, each mark, and the standings. Each
+// athlete runs on the camera screen. Needs npm run dev and npm run service.
 //   node scripts/team-e2e.mjs [output-folder]
 import { launch } from "./review-kit.mjs";
+import {
+  REPLAY,
+  SERVICE,
+  assert,
+  fakeCamera,
+  fresh,
+  nav,
+  seedCourse,
+  serviceToken,
+  signIn,
+  wait,
+} from "./coach-kit.mjs";
 
-const REPLAY = "http://127.0.0.1:5180/";
-const SERVICE = "http://127.0.0.1:5182/replay-api";
+fakeCamera();
 const kit = await launch({ out: process.argv[2] ?? "test-results/team" });
-const assert = (ok, msg) => {
-  if (!ok) throw Error(msg);
-};
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const stamp = Date.now();
 const course = {
   id: `course-team-${stamp}`,
@@ -34,31 +41,29 @@ const course = {
   ],
 };
 
-async function device(size, name, initials) {
+async function device(size, name) {
   const { page, h, context } = await kit.page(size, { label: name });
+  await context.grantPermissions(["camera"]);
   page.setDefaultTimeout(15000);
   page.on("dialog", (d) => d.accept());
-  await page.goto(REPLAY);
-  await page.evaluate(async (c) => {
-    sessionStorage.clear();
-    const { put } = await import("/src/storage.js");
-    await put("courses", c);
-  }, course);
+  await fresh(page, REPLAY);
+  await signIn(page, name);
+  await seedCourse(page, course);
   await page.reload();
-  await page.locator(".chip-select").click();
-  await page.getByRole("menuitemradio", { name }).click();
-  await page.locator(".avatar", { hasText: initials }).waitFor();
+  await page
+    .getByRole("heading", { name: /Good (morning|afternoon|evening)/ })
+    .waitFor();
   return { page, h, context };
 }
 
-const coach = await device("tablet", "Coach Jordan", "CJ");
+const coach = await device("tablet", "Coach Jordan");
 const { page, h } = coach;
 let code = "";
 
 await h.step("set up a team run: three athletes, reordered", async () => {
-  await page.locator(".primary-nav .nav-item", { hasText: "Run" }).click();
+  await nav(page, "Board");
   await page
-    .getByRole("radiogroup", { name: "Run type" })
+    .getByRole("radiogroup", { name: "Board sections" })
     .getByRole("radio", { name: "Team run" })
     .click();
   await page.getByLabel("Course", { exact: true }).selectOption(course.id);
@@ -73,12 +78,6 @@ await h.step("set up a team run: three athletes, reordered", async () => {
     .locator("b")
     .allInnerTexts();
   assert(order.join() === "Theo Parker,Leo Rivera,Maya Brooks", order.join());
-  await page
-    .getByRole("radiogroup", { name: "Fail limit" })
-    .getByRole("radio", { name: "1" })
-    .click();
-  const countdown = page.getByRole("switch", { name: "3-2-1 countdown" });
-  if (await countdown.isChecked()) await countdown.locator("..").click();
 });
 await h.overflow("team setup");
 await h.shot("team-setup", { full: true });
@@ -99,7 +98,7 @@ await h.step("start it: Theo is up next and a code is shown", async () => {
   code = note.match(/code ([A-Z0-9]{6})/)[1];
 });
 
-const viewer = await device("desktop", "Coach Priya", "CP");
+const viewer = await device("desktop", "Coach Priya");
 await viewer.h.step("the spectator link opens the watch screen", async () => {
   await viewer.page.goto(`${REPLAY}?team=${code}`);
   await viewer.page
@@ -120,19 +119,51 @@ const clockOf = async () =>
     (await watch.locator(".rp-watch-clock").innerText()).replace(/[^\d.]/g, ""),
   );
 
+const camera = () => page.getByRole("dialog", { name: "Camera" });
 async function run(gap, results) {
-  await page.getByRole("button", { name: "Go" }).click();
+  await camera().waitFor();
+  await page.getByRole("button", { name: "Start the run" }).click();
   for (const r of results) {
     await wait(gap);
-    await page.locator(r === "fail" ? ".rp-run-fail" : ".rp-run-pass").click();
+    await page.locator(r === "fail" ? ".rp-key-fail" : ".rp-key-pass").click();
   }
 }
+// Keep the recording and go back to the team run.
+async function keep(ended = /^Clean run in/) {
+  await page.getByRole("heading", { name: ended }).waitFor();
+  await page.getByLabel("Recording of this run").waitFor({ timeout: 15000 });
+  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await page.getByRole("button", { name: "Back to the team run" }).click();
+  await camera().waitFor({ state: "detached" });
+}
+
+await h.step(
+  "the camera is fixed to the team's course; set a fail limit of 1",
+  async () => {
+    await page.getByRole("button", { name: "Start Theo's run" }).click();
+    await camera().waitFor();
+    await page
+      .getByRole("button", { name: "Recording Theo Parker. Change" })
+      .waitFor();
+    await page.getByRole("button", { name: "Capture settings" }).click();
+    const settings = page.getByRole("dialog", { name: "Capture settings" });
+    await settings.getByText(`${course.name}, set by the team run.`).waitFor();
+    await settings
+      .getByRole("radiogroup", { name: "Fail limit" })
+      .getByRole("radio", { name: "1" })
+      .click();
+    const countdown = settings.getByRole("switch", { name: "3-2-1 countdown" });
+    if (await countdown.isChecked()) await countdown.locator("..").click();
+    await settings.getByRole("button", { name: "Done" }).click();
+  },
+);
+await h.shot("team-camera");
 
 await h.step("Theo's run shows live on the spectator screen", async () => {
-  await page.getByRole("button", { name: "Start Theo's run" }).click();
   await viewer.page.bringToFront();
   await watch.getByText("Theo Parker", { exact: true }).first().waitFor();
-  await page.getByRole("button", { name: "Go" }).click();
+  await page.bringToFront();
+  await page.getByRole("button", { name: "Start the run" }).click();
   await viewer.page.bringToFront();
   await watch.locator(".rp-watch-clock").waitFor();
   await wait(1200);
@@ -140,7 +171,7 @@ await h.step("Theo's run shows live on the spectator screen", async () => {
   await wait(700);
   const b = await clockOf();
   assert(b > a && a > 0.5, `spectator clock ${a} → ${b}`);
-  await page.locator(".rp-run-pass").click();
+  await page.locator(".rp-key-pass").click();
   await viewer.page.bringToFront();
   await watch.locator(".rp-team-marks li.is-pass").waitFor();
   await viewer.page.bringToFront();
@@ -150,14 +181,12 @@ await viewer.h.shot("watch-live");
 await viewer.h.overflow("watch live");
 
 await h.step("Theo finishes clean and leads the standings", async () => {
+  await page.bringToFront();
   for (let i = 0; i < 2; i++) {
     await wait(300);
-    await page.locator(".rp-run-pass").click();
+    await page.locator(".rp-key-pass").click();
   }
-  await page.getByRole("heading", { name: /^Clean run in/ }).waitFor();
-  await page.getByRole("button", { name: "Save run" }).click();
-  await page.getByText("Saved", { exact: false }).first().waitFor();
-  await page.getByRole("button", { name: "Next athlete" }).click();
+  await keep();
   await viewer.page.bringToFront();
   await watch.locator(".rp-standings li").first().getByText("1st").waitFor();
   assert(
@@ -172,35 +201,40 @@ await h.step("Theo finishes clean and leads the standings", async () => {
     .waitFor();
 });
 
-await h.step("a discarded run clears the course for spectators", async () => {
-  await page.getByRole("button", { name: "Start Leo's run" }).click();
-  await viewer.page.bringToFront();
-  await watch.locator(".rp-watch-live").getByText("On course").waitFor();
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await viewer.page.bringToFront();
-  await watch.getByText("Between runs").waitFor();
-  await page
-    .getByRole("region", { name: "Up next" })
-    .getByText("Leo Rivera")
-    .waitFor();
-});
+await h.step(
+  "closing the camera clears the course for spectators",
+  async () => {
+    await page.bringToFront();
+    await page.getByRole("button", { name: "Start Leo's run" }).click();
+    await viewer.page.bringToFront();
+    await watch.locator(".rp-watch-live").getByText("On course").waitFor();
+    await page.bringToFront();
+    await page.getByRole("button", { name: "Close camera" }).click();
+    await camera().waitFor({ state: "detached" });
+    await viewer.page.bringToFront();
+    await watch.getByText("Between runs").waitFor();
+    await page
+      .getByRole("region", { name: "Up next" })
+      .getByText("Leo Rivera")
+      .waitFor();
+  },
+);
 
 await h.step("Leo fails at the limit and ranks below clean runs", async () => {
+  await page.bringToFront();
   await page.getByRole("button", { name: "Start Leo's run" }).click();
   await run(300, ["fail"]);
-  await page.getByRole("heading", { name: /^Fail limit at/ }).waitFor();
-  await page.getByRole("button", { name: "Save run" }).click();
-  await page.getByRole("button", { name: "Next athlete" }).click();
+  await keep(/^Fail limit at/);
   const leo = watch.locator(".rp-standings li", { hasText: "Leo Rivera" });
   await leo.getByText("No clean run").waitFor();
   await leo.getByText("Fail limit · 0 passed").waitFor();
 });
 
 await h.step("Maya runs faster and takes first", async () => {
+  await page.bringToFront();
   await page.getByRole("button", { name: "Start Maya's run" }).click();
   await run(100, ["pass", "pass", "pass"]);
-  await page.getByRole("button", { name: "Save run" }).click();
-  await page.getByRole("button", { name: "Next athlete" }).click();
+  await keep();
   await viewer.page.bringToFront();
   await watch
     .locator(".rp-standings li")
@@ -220,14 +254,14 @@ await h.step("Maya runs faster and takes first", async () => {
 await h.step(
   "Run again gives Leo another go; his clean run beats Theo",
   async () => {
+    await page.bringToFront();
     await page
       .getByRole("region", { name: "Running order" })
       .locator("li", { hasText: "Leo Rivera" })
       .getByRole("button", { name: "Run again" })
       .click();
     await run(400, ["pass", "pass", "pass"]);
-    await page.getByRole("button", { name: "Save run" }).click();
-    await page.getByRole("button", { name: "Next athlete" }).click();
+    await keep();
     await viewer.page.bringToFront();
     await watch
       .locator(".rp-standings li", { hasText: "Leo Rivera" })
@@ -241,15 +275,7 @@ await h.shot("team-panel", { full: true });
 await viewer.h.shot("watch-standings");
 
 await h.step("a family with no kid in the team can't watch it", async () => {
-  const t = (
-    await (
-      await fetch(`${SERVICE}/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: "+16025550104" }),
-      })
-    ).json()
-  ).token;
+  const t = await serviceToken("+16025550104");
   const status = (
     await fetch(`${SERVICE}/teams/${code}`, {
       headers: { Authorization: `Bearer ${t}` },
@@ -261,8 +287,9 @@ await h.step("a family with no kid in the team can't watch it", async () => {
 await h.step(
   "ending the team run shows final standings to spectators",
   async () => {
+    await page.bringToFront();
     await page.getByRole("button", { name: "End team run" }).click();
-    await page.getByRole("heading", { name: "Set up the run" }).waitFor();
+    await page.getByRole("button", { name: "Start team run" }).waitFor();
     await viewer.page.bringToFront();
     await watch.getByText("Final standings").waitFor();
     await viewer.page.bringToFront();
@@ -273,7 +300,7 @@ h.errors("coach");
 viewer.h.errors("viewer");
 
 // A phone-sized spectator, for the layout.
-const phone = await device("phone", "Coach Alex", "CA");
+const phone = await device("phone", "Coach Alex");
 await phone.page.goto(`${REPLAY}?team=${code}`);
 await phone.h.step("the watch screen fits a phone", async () => {
   await phone.page.locator(".rp-watch").getByText("Final standings").waitFor();
@@ -283,15 +310,7 @@ await phone.h.shot("watch-phone", { full: true });
 phone.h.errors("phone viewer");
 
 // Clean up the shared runs from this test.
-const t = (
-  await (
-    await fetch(`${SERVICE}/session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: "+16025550150" }),
-    })
-  ).json()
-).token;
+const t = await serviceToken();
 const runs = (
   await (
     await fetch(`${SERVICE}/runs`, {

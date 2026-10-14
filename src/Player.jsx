@@ -1,6 +1,6 @@
 // The take's video with frame-level transport, and the clip to analyze.
 import React from "react";
-import { ArrowRight, Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Button,
   Card,
@@ -12,7 +12,6 @@ import {
   Tag,
 } from "./ds/index.jsx";
 import { seconds, stamp } from "./format.js";
-import { DESTINATIONS } from "./workflow.js";
 
 const SPEEDS = [
   { value: 0.25, label: "¼×" },
@@ -102,17 +101,7 @@ export function Player({
   );
 }
 
-export function ClipCard({
-  take,
-  now,
-  onChange,
-  loop,
-  onLoop,
-  destination,
-  onDestination,
-  onRequest,
-  analysis,
-}) {
+export function ClipCard({ take, now, onChange, loop, onLoop }) {
   const length = Math.max(0, take.end - take.start);
   const pct = (t) => `${(t / take.duration) * 100}%`;
   return (
@@ -123,7 +112,7 @@ export function ClipCard({
             Clip
           </h3>
           <p className="ds-note">
-            Only this interval is analyzed, rendered and published.
+            Trim to the run. Only this part is analyzed and shared.
           </p>
         </div>
         <Tag tone="info">{seconds(length)} selected</Tag>
@@ -147,7 +136,7 @@ export function ClipCard({
                 min="0"
                 max={take.duration}
                 step=".1"
-                value={take[field]}
+                value={Math.round(take[field] * 100) / 100}
                 onChange={(v) => onChange({ [field]: Number(v) })}
               />
             </Field>
@@ -167,33 +156,6 @@ export function ClipCard({
         label="Loop the clip"
         note="Playback jumps back to the start at the end of the clip."
       />
-      <div className="rp-request">
-        <div className="ds-field">
-          <span className="ds-field-label" id="rp-dest">
-            Process with
-          </span>
-          <Segmented
-            label="Process with"
-            options={DESTINATIONS}
-            value={destination}
-            onChange={onDestination}
-          />
-        </div>
-        <Button
-          variant="dark"
-          icon={ArrowRight}
-          disabled={!!analysis}
-          onClick={onRequest}
-        >
-          {analysis ? "Clip analyzed" : "Request analysis"}
-        </Button>
-      </div>
-      {destination !== "browser" && (
-        <p className="ds-note">
-          Onsite and remote workers aren't connected yet. The request saves a
-          manifest you can download from Requests; no video is uploaded.
-        </p>
-      )}
     </Card>
   );
 }

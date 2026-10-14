@@ -1,11 +1,16 @@
-// The member app's coach shell: floating bar, gradient masthead with the
-// dot field, the hero with its status and next step, and the toast.
+// The member app's coach shell: floating bar with pill navigation (an ink
+// tab bar on phones), the gradient masthead, a compact page header, and the
+// toast.
 import React, { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, ChevronDown, X } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronLeft,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import DotField from "./DotField.jsx";
-import { Button } from "./ds/index.jsx";
 import { initials } from "./format.js";
-import { DEMO_COACHES } from "./hooks.js";
 import { BASE, MEMBER_APP, asset } from "./paths.js";
 import { hasService } from "./service.js";
 
@@ -13,7 +18,7 @@ export function AppBar({ scrolled, nav, roster }) {
   return (
     <header className={`appbar ${scrolled ? "is-scrolled" : ""}`.trim()}>
       <div className="appbar-inner">
-        <a className="brand" href={BASE}>
+        <a className="brand" href={`${BASE}#/floor`}>
           <img
             src={asset("lab-white.svg")}
             alt="The LAB — Learn. Adapt. Build."
@@ -54,7 +59,7 @@ export function AppBar({ scrolled, nav, roster }) {
 function AccountMenu({ roster }) {
   const [open, setOpen] = useState(false);
   const wrap = useRef(null);
-  const { account } = roster;
+  const { coach, shared } = roster;
 
   useEffect(() => {
     if (!open) return;
@@ -68,67 +73,54 @@ function AccountMenu({ roster }) {
     };
   }, [open]);
 
-  const choose = (phone) => {
-    setOpen(false);
-    roster.signIn(phone);
-  };
-
   return (
     <div className="rp-account" ref={wrap}>
       <button
         className="chip-select"
         aria-haspopup="menu"
         aria-expanded={open}
-        disabled={roster.busy}
+        aria-label={`${coach.name} menu`}
         onClick={() => setOpen(!open)}
       >
-        <span className="avatar">{account ? initials(account.name) : "?"}</span>
-        <span className="chip-name">
-          {roster.busy
-            ? "Connecting…"
-            : account
-              ? account.name
-              : hasService
-                ? "Connect roster"
-                : "This device"}
+        <span className="avatar" aria-hidden="true">
+          {initials(coach.name)}
         </span>
+        <span className="chip-name">{coach.name}</span>
         <ChevronDown size={14} aria-hidden="true" />
       </button>
       {open && (
         <div className="cc-menu" role="menu">
-          <span className="eyebrow">
-            {!hasService
-              ? "Shared features are off in this copy"
-              : account
-                ? "Switch coach"
-                : "Sign in as a demo coach"}
-          </span>
-          {hasService &&
-            DEMO_COACHES.map((c) => (
-              <button
-                key={c.phone}
-                role="menuitemradio"
-                aria-checked={account?.name === c.name}
-                onClick={() => choose(c.phone)}
-              >
-                {c.name}
-                {account?.name === c.name && <Check size={16} />}
-              </button>
-            ))}
-          <a role="menuitem" href={MEMBER_APP} onClick={() => setOpen(false)}>
-            LAB member app <ArrowRight size={16} />
-          </a>
-          {account && (
+          <span className="eyebrow">Coaching as {coach.name}</span>
+          <p className={`rp-account-sync ${shared ? "is-on" : ""}`.trim()}>
+            {shared
+              ? "Shared with the team: runs, the gym list, boards, messages."
+              : hasService
+                ? "The team service isn't answering. Work stays on this device."
+                : "This copy works on this device only."}
+          </p>
+          {!shared && hasService && (
             <button
               role="menuitem"
               onClick={() => {
                 setOpen(false);
-                roster.signOut();
+                roster.retry();
               }}
             >
-              Disconnect roster
+              <RefreshCw size={16} /> Try the service again
             </button>
           )}
+          <button
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              roster.signOut();
+            }}
+          >
+            Switch coach
+          </button>
+          <a role="menuitem" href={MEMBER_APP} onClick={() => setOpen(false)}>
+            LAB member app <ArrowRight size={16} />
+          </a>
         </div>
       )}
     </div>
@@ -145,9 +137,10 @@ function OutlineWords() {
   );
 }
 
-export function Masthead({ children }) {
+// The full gradient panel with the dot field: the Floor's command area.
+export function Masthead({ children, className }) {
   return (
-    <section className="masthead">
+    <section className={`masthead ${className ?? ""}`.trim()}>
       <div className="masthead-art" aria-hidden="true">
         <DotField />
         <OutlineWords />
@@ -157,37 +150,35 @@ export function Masthead({ children }) {
   );
 }
 
-// title is [plain, emphasis]: the emphasis renders in sky blue.
-export function Hero({ eyebrow, title, lead, aside, actions }) {
+// A short header for every other screen: where you are, and a way back.
+export function PageHead({
+  eyebrow,
+  title,
+  sub,
+  back,
+  onBack,
+  actions,
+  children,
+}) {
   return (
-    <div className={`cf-hero ${aside ? "" : "no-aside"}`.trim()}>
-      <div className="cf-hero-copy">
-        {eyebrow && <span className="eyebrow">{eyebrow}</span>}
-        <h1>
-          {title[0]} <em>{title[1]}</em>
-        </h1>
-        {lead && <p className="lead">{lead}</p>}
+    <section className="masthead rp-head">
+      <div className="masthead-art" aria-hidden="true" />
+      <div className="masthead-inner rp-head-inner">
+        {back && (
+          <button className="rp-back" onClick={onBack}>
+            <ChevronLeft size={18} aria-hidden="true" /> {back}
+          </button>
+        )}
+        <div className="rp-head-row">
+          <div className="rp-head-text">
+            {eyebrow && <span className="eyebrow">{eyebrow}</span>}
+            <h1>{title}</h1>
+            {sub && <p>{sub}</p>}
+          </div>
+          {actions && <div className="rp-head-actions">{actions}</div>}
+        </div>
+        {children}
       </div>
-      {aside && <div className="cf-hero-aside">{aside}</div>}
-      {actions && <div className="cf-hero-actions">{actions}</div>}
-    </div>
-  );
-}
-
-// The next step for the selected take, as a glass card on the masthead.
-export function NextStep({ step, onGo }) {
-  return (
-    <section className="cf-next" aria-label="Next step">
-      <span className="eyebrow">
-        {step.complete
-          ? "All steps done"
-          : `Next · step ${step.done + 1} of ${step.total}`}
-      </span>
-      <h2>{step.title}</h2>
-      <p>{step.lead}</p>
-      <Button onClick={onGo}>
-        {step.action} <ArrowRight size={18} aria-hidden="true" />
-      </Button>
     </section>
   );
 }

@@ -1,0 +1,391 @@
+/* ============================================
+   LAB REPLAY · CAPTURE
+   The camera full screen. Controls float over it on dark gradients so
+   they read against any picture. Tokens only.
+   ============================================ */
+
+.rp-cap {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  background: var(--ds-black);
+  color: var(--ds-white);
+}
+.rp-cap-live,
+.rp-cap-replay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--ds-black);
+}
+.rp-cap-replay {
+  z-index: 1;
+  object-fit: contain;
+}
+.rp-cap-wait {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-error {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--ds-space-4);
+  padding: var(--ds-space-8);
+  text-align: center;
+  background: var(--ds-grad-deep);
+}
+
+/* ---------- Top: close, who, settings ---------- */
+.rp-cap-top {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: calc(var(--ds-space-3) + env(safe-area-inset-top)) var(--ds-space-3)
+    var(--ds-space-8);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ds-black) 72%, transparent),
+    transparent
+  );
+}
+.rp-cap-top.is-warn {
+  box-shadow: inset 0 6px 0 var(--ds-gold);
+}
+.rp-cap-top .ds-iconbtn {
+  color: var(--ds-white);
+  background: color-mix(in srgb, var(--ds-black) 35%, transparent);
+}
+.rp-cap-kid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  justify-self: center;
+  max-width: 100%;
+  min-height: var(--ds-target);
+  padding: var(--ds-space-1) var(--ds-space-4) var(--ds-space-1)
+    var(--ds-space-1);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-black) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-white) 22%, transparent);
+  text-align: left;
+}
+.rp-cap-kid:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.rp-cap-kid > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+.rp-cap-kid b,
+.rp-cap-kid small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-cap-kid small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-modes {
+  position: absolute;
+  top: calc(84px + env(safe-area-inset-top));
+  left: 0;
+  right: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+}
+.rp-cap-modes .ds-seg {
+  background: color-mix(in srgb, var(--ds-black) 45%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 22%, transparent);
+}
+.rp-cap-modes .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-modes .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+
+/* ---------- While recording ---------- */
+.rp-cap-hud {
+  position: absolute;
+  left: var(--ds-space-4);
+  top: calc(96px + env(safe-area-inset-top));
+  z-index: 2;
+  display: grid;
+  justify-items: start;
+  gap: var(--ds-space-1);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-lg);
+  background: color-mix(in srgb, var(--ds-ink) 70%, transparent);
+  pointer-events: none;
+}
+.rp-cap-hud b {
+  font-family: var(--ds-font-display);
+  font-size: 56px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.rp-cap-hud b.is-warn {
+  color: var(--ds-gold);
+}
+.rp-cap-hud span {
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  color: var(--ds-sky);
+}
+.rp-cap-hud .is-ahead {
+  color: var(--ds-good-on-ink);
+}
+.rp-cap-hud .is-behind {
+  color: var(--ds-bad-on-ink);
+}
+.rp-cap-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-size: var(--ds-text-label) !important;
+  font-weight: 800 !important;
+  color: var(--ds-white) !important;
+}
+.rp-cap-rec::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ds-bad-on-ink);
+}
+.rp-cap-flash {
+  position: absolute;
+  right: var(--ds-space-4);
+  top: calc(96px + env(safe-area-inset-top));
+  z-index: 2;
+  padding: var(--ds-space-2) var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.rp-cap-flash.is-pass {
+  background: var(--ds-data-goal);
+}
+.rp-cap-flash.is-fail {
+  background: var(--ds-data-alert);
+}
+.rp-cap-flash.is-skip {
+  background: var(--ds-gray-500);
+}
+.rp-cap-count {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-family: var(--ds-font-display);
+  font-size: min(48vw, 260px);
+  font-weight: 800;
+  color: var(--ds-cyan);
+  text-shadow: 0 8px 40px color-mix(in srgb, var(--ds-black) 60%, transparent);
+  pointer-events: none;
+}
+
+/* ---------- Bottom: the big button, the keys, keep or retake ---------- */
+.rp-cap-bottom {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-10) var(--ds-space-4)
+    calc(var(--ds-space-6) + env(safe-area-inset-bottom));
+  background: linear-gradient(
+    0deg,
+    color-mix(in srgb, var(--ds-black) 78%, transparent),
+    transparent
+  );
+}
+.rp-cap-note {
+  max-width: 34ch;
+  text-align: center;
+  font-weight: 600;
+  color: var(--ds-text-on-ink-2);
+}
+.rp-shutter {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 5px solid var(--ds-white);
+  background: transparent;
+}
+.rp-shutter span {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--ds-bad-on-ink);
+  transition:
+    border-radius var(--ds-fast),
+    transform var(--ds-fast);
+}
+.rp-shutter.is-recording span {
+  border-radius: var(--ds-radius-sm);
+  transform: scale(0.55);
+}
+.rp-shutter:disabled {
+  opacity: 0.45;
+}
+.rp-cap-keys {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: var(--ds-space-3);
+  width: min(560px, 100%);
+}
+.rp-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-2);
+  min-height: 96px;
+  border-radius: var(--ds-radius-xl);
+  font-family: var(--ds-font-display);
+  font-size: 28px;
+  font-weight: 800;
+}
+.rp-key:active {
+  transform: scale(0.97);
+}
+.rp-key-pass {
+  background: var(--ds-cyan);
+  color: var(--ds-ink);
+}
+.rp-key-fail {
+  background: var(--ds-bad);
+  color: var(--ds-white);
+}
+.rp-cap-minor {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.rp-cap-keys > .ds-tag {
+  grid-column: 1 / -1;
+  justify-self: center;
+}
+
+/* Keep or retake, and the saved card. */
+.rp-cap-done {
+  display: grid;
+  gap: var(--ds-space-3);
+  width: min(560px, 100%);
+  max-height: 64vh;
+  overflow-y: auto;
+  padding: var(--ds-space-5);
+  border-radius: var(--ds-radius-xl);
+  background: color-mix(in srgb, var(--ds-ink) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-white) 12%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.rp-cap-done-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-h2);
+  line-height: 1.1;
+}
+.rp-cap-done-head p {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-done .ds-field-label {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-done-acts {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: var(--ds-space-2);
+}
+.rp-cap-done-acts .button {
+  min-height: var(--ds-target-lg);
+}
+.rp-cap-splits {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-cap-splits li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-white) 7%, transparent);
+}
+.rp-cap-splits li .ds-seg {
+  grid-column: 1;
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  box-shadow: none;
+}
+.rp-cap-splits li .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-cap-splits li .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+.rp-cap-splits li > b {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-variant-numeric: tabular-nums;
+}
+.rp-cap-next {
+  display: flex;
+  gap: var(--ds-space-2);
+  overflow-x: auto;
+  padding-bottom: var(--ds-space-1);
+}
+.rp-cap-next-kid {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  flex: none;
+  min-height: var(--ds-target);
+  padding: var(--ds-space-1) var(--ds-space-4) var(--ds-space-1)
+    var(--ds-space-1);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ds-white) 18%, transparent);
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-shutter span {
+    transition: none;
+  }
+}

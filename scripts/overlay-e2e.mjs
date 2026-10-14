@@ -8,6 +8,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { launch } from "./review-kit.mjs";
+import { fresh, seedCourse, signIn, stored } from "./coach-kit.mjs";
 
 const plain = chromium.launch.bind(chromium);
 chromium.launch = (options = {}) =>
@@ -113,61 +114,60 @@ const { page, h, context } = await kit.page("phone", { label: "overlay" });
 await context.grantPermissions(["camera"]);
 page.setDefaultTimeout(15000);
 page.on("dialog", (d) => d.accept());
-await page.goto(REPLAY);
-await page.evaluate(async (c) => {
-  localStorage.removeItem("replay-run-setup");
-  const { put } = await import("/src/storage.js");
-  await put("courses", c);
-}, course);
-await page.reload();
+await fresh(page);
+await signIn(page);
+await seedCourse(page, course);
 
-async function filmRun(withTimer) {
-  await page.locator(".primary-nav .nav-item", { hasText: "Run" }).click();
-  await page.getByLabel("Who's running").fill("Overlay tester");
-  await page.getByLabel("Course", { exact: true }).selectOption(course.id);
-  const sw = async (label, on) => {
-    const box = page.getByRole("switch", { name: label });
-    if ((await box.isChecked()) !== on) await box.locator("..").click();
-  };
-  await sw("Film the run", true);
-  await sw("Timer on the video", withTimer);
-  await sw("3-2-1 countdown", false);
-  await page.getByRole("button", { name: "Start the run" }).click();
-  await page.locator(".rp-run-cam video").waitFor();
-  await page.getByRole("button", { name: "Go" }).click({ timeout: 20000 });
+// From the Floor into the camera, as a timed course run for Theo.
+async function timedRun() {
+  await page.getByRole("button", { name: "Timed course" }).click();
+  await page.getByRole("button", { name: /No kid picked/ }).click();
+  await page
+    .getByRole("dialog", { name: "Who's running?" })
+    .getByRole("button", { name: /Theo Parker/ })
+    .click();
+  await page.getByRole("button", { name: "Capture settings" }).click();
+  const settings = page.getByRole("dialog", { name: "Capture settings" });
+  await settings.getByLabel("Course", { exact: true }).selectOption(course.id);
+  const cd = settings.getByRole("switch", { name: "3-2-1 countdown" });
+  if (await cd.isChecked()) await cd.locator("..").click();
+  await settings.getByRole("button", { name: "Done" }).click();
+  await page
+    .getByRole("button", { name: "Start the run" })
+    .click({ timeout: 20000 });
 }
 
 await h.step("the live picture shows the clock and the obstacle", async () => {
-  await filmRun(true);
-  const hud = page.locator(".rp-run-hud");
+  await timedRun();
+  const hud = page.locator(".rp-cap-hud");
   await hud.waitFor();
   await hud.getByText("1 of 3 · Rings").waitFor();
   const a = Number(await hud.locator("b").innerText());
   await wait(700);
   const b = Number(await hud.locator("b").innerText());
   assert(b > a, `clock ${a} → ${b}`);
-  await page.locator(".rp-run-rec", { hasText: "Timer in video" }).waitFor();
+  await page.locator(".rp-cap-rec", { hasText: "Timer in video" }).waitFor();
 });
 
 await h.step("each mark flashes on the picture", async () => {
-  await page.locator(".rp-run-pass").click();
+  await page.locator(".rp-key-pass").click();
   await page
-    .locator(".rp-run-flash.is-pass", { hasText: "Rings · Pass" })
+    .locator(".rp-cap-flash.is-pass", { hasText: "Rings · Pass" })
     .waitFor();
-  await page.locator(".rp-run-hud").getByText("2 of 3 · Wall").waitFor();
+  await page.locator(".rp-cap-hud").getByText("2 of 3 · Wall").waitFor();
 });
 await h.shot("live-overlay");
 
 let burnedFile = "";
 await h.step("the saved recording has the timer burned in", async () => {
   await wait(900);
-  await page.locator(".rp-run-fail").click();
-  await page.locator(".rp-run-flash.is-fail").waitFor();
+  await page.locator(".rp-key-fail").click();
+  await page.locator(".rp-cap-flash.is-fail").waitFor();
   await wait(900);
-  await page.locator(".rp-run-pass").click();
+  await page.locator(".rp-key-pass").click();
   await page.getByLabel("Recording of this run").waitFor({ timeout: 15000 });
-  await page.getByRole("button", { name: "Save run" }).click();
-  await page.getByText("Saved as a take").waitFor();
+  await page.getByRole("button", { name: "Keep", exact: true }).click();
+  await page.getByRole("region", { name: "Saved" }).waitFor();
   const take = await page.evaluate(async () => {
     const { all } = await import("/src/storage.js");
     const t = (await all("takes")).sort((a, b) =>
@@ -240,27 +240,23 @@ await h.step("the saved recording has the timer burned in", async () => {
 await h.step(
   "with the timer off the recording is the plain camera",
   async () => {
-    await page.getByRole("button", { name: "Next athlete" }).click();
-    await filmRun(false);
-    await page.locator(".rp-run-rec", { hasText: "Recording" }).waitFor();
-    await wait(600);
-    for (let i = 0; i < 3; i++) await page.locator(".rp-run-pass").click();
+    await page.getByRole("button", { name: "Record another" }).click();
+    await page.getByRole("radio", { name: "Record", exact: true }).click();
+    await page.getByRole("button", { name: "Capture settings" }).click();
+    const settings = page.getByRole("dialog", { name: "Capture settings" });
+    const sw = settings.getByRole("switch", { name: "Timer on the video" });
+    if (await sw.isChecked()) await sw.locator("..").click();
+    await settings.getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: "Start recording" }).click();
+    await page.locator(".rp-cap-rec", { hasText: "Recording" }).waitFor();
+    await wait(1200);
+    await page.getByRole("button", { name: "Stop recording" }).click();
     await page.getByLabel("Recording of this run").waitFor({ timeout: 15000 });
-    await page.getByRole("button", { name: "Save run" }).click();
-    await page.getByText("Saved as a take").waitFor();
-    console.log(
-      "  second run:",
-      await page.locator(".rp-run-saved").innerText(),
-      await page.locator(".rp-run-result h2").innerText(),
-    );
-    const takes = await page.evaluate(async () => {
-      const { all } = await import("/src/storage.js");
-      return (await all("takes"))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        .map((t) => [t.createdAt, t.burned, t.name]);
-    });
-    assert(takes.length === 2, `two takes: ${JSON.stringify(takes)}`);
-    assert(takes[0][1] === false, `not burned: ${JSON.stringify(takes)}`);
+    await page.getByRole("button", { name: "Keep", exact: true }).click();
+    await page.getByRole("region", { name: "Saved" }).waitFor();
+    const takes = await stored(page);
+    assert(takes.length === 2, `two takes: ${takes.length}`);
+    assert(takes[0].burned === false, "the newest take isn't burned");
   },
 );
 h.errors("overlay");

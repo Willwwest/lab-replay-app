@@ -1,8 +1,10 @@
 // Attempt scoring: validation, save, reload, update without duplicates,
-// and a failed run kept out of the personal best. Needs npm run dev.
+// and a failed run kept out of the personal best, on a take's Course tab.
+// Needs npm run dev.
 //   node scripts/attempt-review.mjs
 import { chromium, expect } from "@playwright/test";
 import assert from "node:assert/strict";
+import { REPLAY, fresh, signIn } from "./coach-kit.mjs";
 
 const browser = await chromium.launch({ channel: "chrome" });
 const page = await browser.newPage();
@@ -14,14 +16,15 @@ const result = (n, value) =>
     .getByRole("radio", { name: value });
 
 try {
-  await page.goto("http://127.0.0.1:5180");
+  await fresh(page, REPLAY);
+  await signIn(page);
   await page.evaluate(async () => {
     const { put } = await import("/src/storage.js");
     const blob = await (await fetch("/test-results/sample.mp4")).blob();
     await put("takes", {
       id: "attempt-test",
       memberId: "theo",
-      member: "Theo",
+      member: "Theo Parker",
       course: "Training circuit",
       name: "Test",
       blob: new Blob([blob], { type: "video/mp4" }),
@@ -43,7 +46,9 @@ try {
       },
     });
   });
+  await page.goto(`${REPLAY}#/take/attempt-test/course`);
   await page.reload();
+  await page.getByRole("heading", { name: "Theo Parker" }).waitFor();
   await page.getByRole("button", { name: "Save attempt", exact: true }).click();
   await page
     .getByRole("alert")
@@ -78,7 +83,9 @@ try {
 
   for (const width of [320, 390, 820, 1366]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.locator("#attempt").scrollIntoViewIfNeeded();
+    await page
+      .getByRole("heading", { name: "Course attempt" })
+      .scrollIntoViewIfNeeded();
     await page.screenshot({ path: `test-results/attempt-${width}.png` });
     assert.ok(
       await page.evaluate(

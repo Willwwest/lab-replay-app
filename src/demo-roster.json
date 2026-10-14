@@ -1,0 +1,193 @@
+{
+  "staff": [
+    {
+      "id": "jordan",
+      "name": "Coach Jordan",
+      "phone": "+16025550150"
+    },
+    {
+      "id": "sam",
+      "name": "Coach Sam",
+      "phone": "+16025550151"
+    },
+    {
+      "id": "priya",
+      "name": "Coach Priya",
+      "phone": "+16025550152"
+    },
+    {
+      "id": "alex",
+      "name": "Coach Alex",
+      "phone": "+16025550153"
+    },
+    {
+      "id": "riley",
+      "name": "Coach Riley",
+      "phone": "+16025550154"
+    },
+    {
+      "id": "morgan",
+      "name": "Coach Morgan",
+      "phone": "+16025550155"
+    },
+    {
+      "id": "dev",
+      "name": "Coach Dev",
+      "phone": "+16025550156"
+    }
+  ],
+  "members": [
+    {
+      "id": "theo",
+      "name": "Theo Parker"
+    },
+    {
+      "id": "maya",
+      "name": "Maya Brooks"
+    },
+    {
+      "id": "leo",
+      "name": "Leo Rivera"
+    },
+    {
+      "id": "ava",
+      "name": "Ava Nguyen"
+    },
+    {
+      "id": "mateo",
+      "name": "Mateo Nguyen"
+    },
+    {
+      "id": "zoe",
+      "name": "Zoe Kim"
+    },
+    {
+      "id": "eli",
+      "name": "Eli Kim"
+    },
+    {
+      "id": "nora",
+      "name": "Nora Patel"
+    },
+    {
+      "id": "omar",
+      "name": "Omar Haddad"
+    },
+    {
+      "id": "lila",
+      "name": "Lila Haddad"
+    },
+    {
+      "id": "finn",
+      "name": "Finn O'Brien"
+    },
+    {
+      "id": "sofia",
+      "name": "Sofia Garcia"
+    },
+    {
+      "id": "jonah",
+      "name": "Jonah Garcia"
+    },
+    {
+      "id": "amara",
+      "name": "Amara Okafor"
+    },
+    {
+      "id": "kai",
+      "name": "Kai Tanaka"
+    },
+    {
+      "id": "ruby",
+      "name": "Ruby Tanaka"
+    },
+    {
+      "id": "noah",
+      "name": "Noah Schmidt"
+    },
+    {
+      "id": "isla",
+      "name": "Isla Moreno"
+    },
+    {
+      "id": "ezra",
+      "name": "Ezra Cohen"
+    },
+    {
+      "id": "mia",
+      "name": "Mia Johnson"
+    },
+    {
+      "id": "luca",
+      "name": "Luca Rossi"
+    },
+    {
+      "id": "hana",
+      "name": "Hana Ali"
+    },
+    {
+      "id": "ben",
+      "name": "Ben Walker"
+    },
+    {
+      "id": "priya-k",
+      "name": "Priya Kapoor"
+    },
+    {
+      "id": "june",
+      "name": "June Alvarez"
+    },
+    {
+      "id": "max",
+      "name": "Max Alvarez"
+    },
+    {
+      "id": "piper",
+      "name": "Piper Lee"
+    },
+    {
+      "id": "owen",
+      "name": "Owen Lee"
+    },
+    {
+      "id": "aria",
+      "name": "Aria Brown"
+    },
+    {
+      "id": "caleb",
+      "name": "Caleb Brown"
+    },
+    {
+      "id": "nina",
+      "name": "Nina Fischer"
+    },
+    {
+      "id": "sami",
+      "name": "Sami Reyes"
+    },
+    {
+      "id": "tess",
+      "name": "Tess Reyes"
+    },
+    {
+      "id": "jude",
+      "name": "Jude Price"
+    },
+    {
+      "id": "willa",
+      "name": "Willa Hart"
+    },
+    {
+      "id": "rhys",
+      "name": "Rhys Hart"
+    },
+    {
+      "id": "dani",
+      "name": "Dani Ortiz"
+    },
+    {
+      "id": "gabe",
+      "name": "Gabe Ortiz"
+    }
+  ]
+}

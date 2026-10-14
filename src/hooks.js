@@ -5,7 +5,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { all, put, remove } from "./storage.js";
 import { recoverJob, requestJob, transition } from "./domain.js";
 import { analyze } from "./analysis.js";
-import { api, connect, disconnect, savedAccount } from "./service.js";
+import {
+  api,
+  connect,
+  disconnect,
+  hasService,
+  savedAccount,
+} from "./service.js";
+import demoRoster from "./demo-roster.json";
 
 const replace = (list, item) =>
   list.some((x) => x.id === item.id)
@@ -352,45 +359,142 @@ export function useAnalysis(library, onDone) {
 
 /* ---------- Roster connection ---------- */
 
-export const DEMO_COACHES = [
-  { name: "Coach Jordan", phone: "+16025550150" },
-  { name: "Coach Priya", phone: "+16025550152" },
-  { name: "Coach Alex", phone: "+16025550153" },
-];
+// The coaches and members, for choosing who's coaching before any service
+// answers, and for the hosted copy, which has no service. Synthetic demo
+// data, the same the service's roster holds.
+export const COACHES = demoRoster.staff;
+const COACH = "replay-coach";
 
+function storedCoach() {
+  try {
+    const c = JSON.parse(localStorage.getItem(COACH));
+    return COACHES.find((x) => x.id === c?.id) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// Who's coaching on this device, and the members they coach. With a
+// service, the coach is signed in to it (`account`) and shared features
+// work; without one, or while it's down, everything else still does.
 export function useRoster(onError) {
-  const [account, setAccount] = useState(savedAccount);
-  const [members, setMembers] = useState([]);
+  const [coach, setCoach] = useState(storedCoach);
+  const [account, setAccount] = useState(() =>
+    coach && savedAccount()?.id === coach.id ? savedAccount() : null,
+  );
+  const [members, setMembers] = useState(demoRoster.members);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!account) return;
-    api("/members")
-      .then(setMembers)
-      .catch((e) => {
-        // The service restarted and forgot the session.
-        if (e.status === 401) signOut();
-      });
-  }, [account?.id]);
-
-  async function signIn(phone) {
+  // Sign in to the service as this coach (again, if it restarted).
+  const link = useCallback(async (c) => {
+    if (!c || !hasService) return setAccount(null);
     setBusy(true);
     try {
-      setAccount(await connect(phone));
-    } catch (e) {
-      onError(e.message);
+      setAccount(await connect(c.phone));
+    } catch {
+      setAccount(null); // No service right now: work on this device.
     } finally {
       setBusy(false);
     }
+  }, []);
+
+  useEffect(() => {
+    if (coach && !account) link(coach);
+  }, [coach?.id]);
+
+  useEffect(() => {
+    if (!account) return setMembers(demoRoster.members);
+    api("/members")
+      .then(setMembers)
+      .catch((e) => {
+        if (e.status === 401) {
+          disconnect();
+          setAccount(null);
+          link(coach);
+        }
+      });
+  }, [account?.id]);
+
+  function choose(c) {
+    try {
+      localStorage.setItem(COACH, JSON.stringify({ id: c.id }));
+    } catch {}
+    disconnect();
+    setAccount(null);
+    setCoach(c);
   }
 
   function signOut() {
+    try {
+      localStorage.removeItem(COACH);
+    } catch {}
     disconnect();
     setAccount(null);
-    setMembers([]);
+    setCoach(null);
   }
 
-  return { account, members, busy, signIn, signOut };
+  return {
+    coach,
+    account,
+    shared: !!account,
+    members,
+    busy,
+    choose,
+    signOut,
+    retry: () => link(coach),
+  };
+}
+
+/* ---------- Who's in the gym today ---------- */
+
+export const todayKey = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Kids marked as here today. Shared between coaches through the service
+// when there is one; kept on this device otherwise.
+export function useHere(roster) {
+  const date = todayKey();
+  const local = `replay-here:${date}`;
+  const [ids, setIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(local)) ?? [];
+    } catch {
+      return [];
+    }
+  });
+  const shared = roster.shared;
+
+  useEffect(() => {
+    if (!shared) return;
+    let live = true;
+    const load = () =>
+      api(`/here?date=${date}`)
+        .then((rows) => live && setIds(rows.map((r) => r.memberId)))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 15000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [shared, date]);
+
+  async function set(memberId, here) {
+    const next = here
+      ? [...new Set([...ids, memberId])]
+      : ids.filter((x) => x !== memberId);
+    setIds(next);
+    try {
+      localStorage.setItem(local, JSON.stringify(next));
+    } catch {}
+    if (shared)
+      await api("/here", {
+        method: "POST",
+        body: JSON.stringify({ memberId, here, date }),
+      }).catch(() => {});
+  }
+
+  return { ids, set, date };
 }
 
 /* ---------- A take's portfolio review on the service ---------- */

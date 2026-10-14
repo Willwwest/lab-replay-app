@@ -1,7 +1,7 @@
 export function validateClip(take, start, end) {
   if (!take?.blob?.size) throw new Error("Choose a recording first.");
-  if (!take.member.trim() || !take.course.trim())
-    throw new Error("Add a member and course before requesting analysis.");
+  if (!take.member?.trim())
+    throw new Error("Assign a kid before sending this for analysis.");
   if (
     ![start, end, take.duration].every(Number.isFinite) ||
     start < 0 ||
@@ -35,7 +35,7 @@ export function requestJob(
     id: crypto.randomUUID(),
     takeId: take.id,
     member: take.member,
-    course: take.course,
+    course: take.courseMap?.name || take.course || "Recording",
     start,
     end,
     destination,

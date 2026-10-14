@@ -311,7 +311,7 @@ export default function Messages({
                     aria-current={open?.memberId === t.memberId || undefined}
                     onClick={() => onOpen(t.memberId)}
                   >
-                    <span className="avatar">
+                    <span className="avatar" aria-hidden="true">
                       {t.name
                         .split(" ")
                         .map((w) => w[0])

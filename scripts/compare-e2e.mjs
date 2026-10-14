@@ -1,16 +1,13 @@
 // Side by side, end to end in Chrome: default partner, alignment at an
 // obstacle, synchronized playback, nudge, the obstacle-time table, ghost
 // mode, saving a comparison still, head to head, the shortcut from the
-// attempt history and the empty state. Needs npm run dev.
+// attempt history on the Course tab and the empty state. Needs npm run dev.
 //   node scripts/compare-e2e.mjs [output-folder] [size,size]
 import { launch } from "./review-kit.mjs";
+import { REPLAY as BASE, assert, fresh, signIn } from "./coach-kit.mjs";
 
-const BASE = process.env.BASE ?? "http://127.0.0.1:5180/";
 const kit = await launch({ out: process.argv[2] ?? "test-results/compare" });
 const SIZES = process.argv[3]?.split(",") ?? ["phone", "tablet", "desktop"];
-const assert = (ok, msg) => {
-  if (!ok) throw Error(msg);
-};
 const near = (a, b, tol, msg) =>
   assert(Math.abs(a - b) <= tol, `${msg}: ${a.toFixed(3)} vs ${b.toFixed(3)}`);
 
@@ -34,7 +31,6 @@ const RUNS = [
 ];
 
 async function seed(page, runs) {
-  await page.goto(BASE);
   await page.evaluate(
     async ({ runs, points }) => {
       const { put } = await import("/src/storage.js");
@@ -104,7 +100,14 @@ async function seed(page, runs) {
     },
     { runs, points },
   );
+}
+
+// Open take A's Watch tab and the side-by-side panel under it.
+async function open(page) {
+  await page.goto(`${BASE}#/take/take-a/watch`);
   await page.reload();
+  await page.getByRole("heading", { name: "Theo Parker" }).waitFor();
+  await page.getByRole("button", { name: "Side by side", exact: true }).click();
 }
 
 const times = (page) =>
@@ -116,14 +119,21 @@ const times = (page) =>
       ready: a.readyState >= 2 && b.readyState >= 2,
     };
   });
-const section = (page) => page.locator("#compare");
+const titled = (page, title) =>
+  page.locator("section.ds-section", {
+    has: page.getByRole("heading", { name: title, exact: true }),
+  });
+const section = (page) => titled(page, "Side by side");
 
 for (const size of SIZES) {
   const { page, h, context } = await kit.page(size, { label: "compare" });
   page.setDefaultTimeout(10000);
+  await fresh(page);
+  await signIn(page);
 
   await h.step("empty state with only one take", async () => {
     await seed(page, [RUNS[0]]);
+    await open(page);
     await section(page).getByText("Nothing to compare yet").waitFor();
   });
 
@@ -131,6 +141,7 @@ for (const size of SIZES) {
     "the fastest clean run of the same course is suggested",
     async () => {
       await seed(page, RUNS);
+      await open(page);
       await section(page).scrollIntoViewIfNeeded();
       assert(
         (await section(page).getByLabel("Compare with").inputValue()) ===
@@ -230,8 +241,9 @@ for (const size of SIZES) {
       .getByRole("button", { name: "Save as key frame" })
       .click();
     await page.getByRole("region", { name: "Unsaved changes" }).waitFor();
-    await page.locator("#frames").getByText("Coach pick").waitFor();
-    const note = await page.locator("#frames textarea").first().inputValue();
+    const frames = titled(page, "Key frames");
+    await frames.getByText("Coach pick").waitFor();
+    const note = await frames.locator("textarea").first().inputValue();
     assert(note.startsWith("Side by side with Theo Parker"), note);
     await page
       .getByRole("region", { name: "Unsaved changes" })
@@ -259,12 +271,16 @@ for (const size of SIZES) {
   await h.step(
     "Side by side on an earlier attempt picks that take",
     async () => {
-      await page
-        .locator("#attempt .rp-history-run", { hasText: "3.2s" })
+      await page.getByRole("radio", { name: "Course", exact: true }).click();
+      await titled(page, "Course attempt")
+        .locator(".rp-history-run", { hasText: "3.2s" })
         .getByRole("button", { name: "Side by side" })
         .click();
-      await page.waitForFunction(
-        () => document.querySelector("#compare select")?.value === "take-d",
+      await section(page).getByLabel("Compare with").waitFor();
+      assert(
+        (await section(page).getByLabel("Compare with").inputValue()) ===
+          "take-d",
+        "take-d picked",
       );
     },
   );

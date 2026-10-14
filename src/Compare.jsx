@@ -10,7 +10,9 @@ import {
   Layers2,
   Pause,
   Play,
+  Star,
   Swords,
+  Video,
 } from "lucide-react";
 import {
   Button,
@@ -34,6 +36,8 @@ import {
   span,
   splitDeltas,
   takeLabel,
+  together,
+  whose,
 } from "./compare.js";
 import "./compare.css";
 
@@ -99,7 +103,7 @@ export default function Compare({ take, takes, request, onAddFrame, onError }) {
   const urlB = useBlobUrl(b?.blob);
   const deltas = b ? splitDeltas(take, b) : null;
   const range = align ? span(dur.a, align.a) : { from: 0, to: 0 };
-  const headToHead = b && b.memberId !== take.memberId;
+  const headToHead = b && !b.model && b.memberId !== take.memberId;
 
   // Put both videos at shared time tt.
   function place(tt) {
@@ -197,7 +201,7 @@ export default function Compare({ take, takes, request, onAddFrame, onError }) {
         640,
         640,
         408,
-        `${b.member || "Other take"} · ${day(b.createdAt)}`,
+        `${whose(b, "Other take")} · ${day(b.createdAt)}`,
       );
       ctx.fillStyle = color.cyan;
       ctx.fillRect(638, 0, 4, 408);
@@ -205,7 +209,9 @@ export default function Compare({ take, takes, request, onAddFrame, onError }) {
         id: crypto.randomUUID(),
         time: A.currentTime,
         image: c.toDataURL("image/jpeg", 0.85),
-        note: `Side by side with ${b.member || "another take"} on ${day(b.createdAt)}.`,
+        note: b.model
+          ? `Side by side with the model clip "${b.model.title}".${b.model.note ? ` Watch for: ${b.model.note}` : ""}`
+          : `Side by side with ${b.member || "another take"} on ${day(b.createdAt)}.`,
       });
     } catch (e) {
       onError(e.message);
@@ -302,7 +308,7 @@ export default function Compare({ take, takes, request, onAddFrame, onError }) {
                   }}
                 />
                 <figcaption>
-                  <Tag tone="outline">B</Tag> {b.member || "Other take"} ·{" "}
+                  <Tag tone="outline">B</Tag> {whose(b, "Other take")} ·{" "}
                   {day(b.createdAt)}
                 </figcaption>
               </figure>
@@ -407,14 +413,26 @@ export default function Compare({ take, takes, request, onAddFrame, onError }) {
                     Line them up
                   </h3>
                   <p className="ds-note">
-                    {aligns.length > 1
-                      ? "Both start from the same obstacle. Nudge B if a timing was tapped late."
-                      : "These runs don't share timed obstacles, so they line up at each clip's start."}
+                    {align.value === "sync"
+                      ? "Two cameras on the same run, lined up by when each started filming. Nudge B if one looks a frame off."
+                      : aligns.length > 1
+                        ? "Both start from the same obstacle. Nudge B if a timing was tapped late."
+                        : "These runs don't share timed obstacles, so they line up at each clip's start."}
                   </p>
                 </div>
                 {headToHead && (
                   <Tag tone="info" icon={Swords}>
                     Head to head
+                  </Tag>
+                )}
+                {together(take, b) && (
+                  <Tag tone="info" icon={Video}>
+                    {b.angle || "Other camera"}
+                  </Tag>
+                )}
+                {b.model && (
+                  <Tag tone="brand" icon={Star}>
+                    Model clip
                   </Tag>
                 )}
               </header>

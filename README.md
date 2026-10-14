@@ -21,10 +21,10 @@ Run `npm run dev` and `npm run service` in separate terminals. The service requi
 ## A coach's day
 
 1. **Who's coaching.** The app opens on a list of coaches. The choice is kept on the device until **Switch coach** in the account menu. With the service running, picking a coach connects the roster and the shared features; without it, the bundled demo roster (`src/demo-roster.json`) is used and everything stays on the device.
-2. **Floor.** The home screen. **In the gym** at the top holds today's kids (Add kids / Edit opens a searchable sheet). With the service, the list is shared by every coach for the day (`/here`); without it, it's kept on the device per day. Tap a kid to make them up next; tap again to clear. Below: **Record** (named for the kid up next), **Timed course**, a banner when takes are waiting for a kid, and today's takes.
+2. **Floor.** The home screen. **In the gym** at the top holds today's kids (Add kids / Edit opens a searchable sheet). With the service, the list is shared by every coach for the day (`/here`); without it, it's kept on the device per day. Tap a kid to make them up next; tap again to clear. Below: **Record** (named for the kid up next), **Timed course**, a banner when takes are waiting for a kid, **Needs you** (below) and today's takes, with **Import a video** and **Be a camera angle**.
 3. **Camera.** Record and Timed course open a full-screen camera. The top bar has Close, the kid (tap to change, or record with no kid), and Capture settings. Record mode films until Stop. Timed course needs a kid and a saved course and runs the live timer (below). After a recording: **Keep** or **Retake**. Keep saves the take and shows **Saved** with the next kids in the gym as one-tap chips, **Record another**, **Open take** and **Done**. The camera stays open between recordings. The phone's back button closes it.
-4. **Takes.** Every recording, filtered **To assign**, **To check**, **Analyzed** or **All**. A take with no kid has an **Assign** button that opens the kid picker.
-5. **A take** has four tabs: **Watch** (player, clip, the analysis card, key frames, side by side), **Course** (course name, course map, scored attempt, member progress), **Coach** (assessment, what went well, next cue) and **Share** (portfolio clip, message the family, files). A header shows the kid, the course and five stages: Kid, Checked, Analyzed, Coached, Shared. Edits stay in a draft until **Save** on the save bar.
+4. **Takes.** Every recording, filtered **To assign**, **To check**, **Analyzed**, **Models** or **All**, and narrowed by a search, a month and a tag (below). A take with no kid has an **Assign** button that opens the kid picker.
+5. **A take** has four tabs: **Watch** (player, clip, the analysis card, key frames with drawing, camera angles, voice-overs, side by side), **Course** (course name, course map, scored attempt, member progress), **Coach** (assessment, what went well, next cue, tags) and **Share** (portfolio clip with an optional voice-over, model clip, message the family, files). A header shows the kid, the course and five stages: Kid, Checked, Analyzed, Coached, Shared. Edits stay in a draft until **Save** on the save bar.
 
 ## Checking before analysis
 
@@ -48,7 +48,7 @@ A new take is a **Raw recording**. To send it for analysis the coach trims the c
 - Clip boundary selection, the check gate and confirmed analysis sends.
 - Persistent queue; cancel; duplicate protection; interrupted jobs become failed and need a new send.
 - Browser MediaPipe inference in a worker, only within the sent interval. About 2 frames/second, at most about 600 samples. This is sparse review assistance, not high-speed movement grading.
-- Tracking coverage and sampled frames; manual key frames with notes.
+- Tracking coverage and sampled frames; manual key frames with notes, drawing and body angles.
 - Coach assessment, strengths, next cue; self-contained HTML review export and original video download.
 
 Browser storage is not a backup and may be evicted or cleared. Export important originals and reports. Published outputs use shared disk/SQLite storage; original drafts and reusable course templates are device-local. No production identity, original-video cross-device sync, remote GPU submission, automatic course segmentation, calibrated biomechanics or automatic performance grading is implemented. A saved HTML report includes selected stills and notes, not the original video.
@@ -62,7 +62,7 @@ The model and WASM assets are served locally from public/models. WASM files come
 1. Replace demo sessions and the roster snapshot with shared verified accounts and roster synchronization; deploy private storage and resumable uploads.
 2. Server-enforced submission queue and job cancellation; onsite/remote worker adapter described in WORKER-CONTRACT.md.
 3. Extend the course route with obstacle segments and rubric-specific grading; validate models with coach-labelled footage.
-4. Drawing tools on frames and comparisons.
+4. A member-app view for voice-overs and the "seen" counts once the LAB app shows the portfolio again (see Verification).
 
 Browser jobs start only when a coach sends a checked clip, one at a time. Onsite/remote choices save exportable manifests only; they do not upload recordings or rent compute.
 
@@ -81,9 +81,47 @@ Browser suites use Chrome's fake camera and `test-results/sample.mp4` (a four-se
 | `npm run e2e:messages`    | Replay on a phone and the LAB app on a desktop: send a run from a take, reply, unread count, kid view, delete, another family.                                                                                                                                                                                              |
 | `npm run e2e:attempt`     | Attempt validation, persistence, corrections and widths.                                                                                                                                                                                                                                                                    |
 | `npm run e2e:portfolio`   | Import, assign, map, attempt, coaching, check and send, render, publish, family playback, isolation, withdrawal. Confirms the output MP4 is exactly two seconds. This validates plumbing, not movement grading accuracy.                                                                                                    |
+| `npm run e2e:draw`        | Drawing on key frames at 390, 1366 and 320 wide: each tool, moving an angle's vertex, undo, recolor, delete, Done, reopening, the back button, clearing, a side-by-side still.                                                                                                                                              |
+| `npm run e2e:body`        | The body on a still of a person (`test-results/fixtures/person.mp4`): joint readings, a reading as an angle mark, the Angle tool snapping to a joint, the pose kept, a frame with nobody on it.                                                                                                                             |
+| `npm run e2e:voice`       | A voice-over with Chrome's fake microphone and camera: the level meter, drawing while recording, sound in the file, Keep, back, the portfolio voice-over rendered to H.264/AAC, family access before and after publishing and withdrawal, delete.                                                                           |
+| `npm run e2e:tags`        | Suggested and typed tags, removing one, search by field, #tag, a tag chip and a month, no results, the search kept across a take.                                                                                                                                                                                           |
+| `npm run e2e:models`      | A take with no kid as a model clip, the Models filter, the default partner in Side by side and its still's note, turning it off.                                                                                                                                                                                            |
+| `npm run e2e:seen`        | Not seen / Seen under the latest coach message, and who in the family watched a published clip and how often.                                                                                                                                                                                                               |
+| `npm run e2e:needs`       | Each Needs you reason, kids in the gym first, Up next from the list, a filmed kid leaving it.                                                                                                                                                                                                                               |
+| `npm run e2e:angles`      | Two phones: the host's code, a second coach's phone joining, both filming one run, the clip arriving on the host lined up by time, assigning both, a retake, ending the session.                                                                                                                                            |
 | `npm run e2e:hosted`      | A hosted build (`BASE=<url>`): the gate with the bundled roster, assets from the sub-path, the device-only gym list, a recording with the burned-in timer, and pose analysis of a checked clip.                                                                                                                             |
 
 Real iOS and representative gym footage remain required for pilot acceptance.
+
+As of October 14, 2026 the LAB member app on 5173 has no Portfolio or Messages screens, so the steps of `e2e:messages`, `e2e:leaderboard` and `e2e:portfolio` that drive it as a parent fail; the Replay and service steps of those suites pass, and `e2e:voice` and `e2e:seen` check the family's side through the service's API instead.
+
+## Drawing and the body on key frames
+
+**Draw** under the video saves the paused frame and opens it full screen; each key frame card has **Draw** too, and stills saved from Side by side can be drawn on. Tools: Move, Arrow, Line, Circle, Angle, Text, Freehand, in five token inks, with Undo, Delete and Clear. Drag to draw, tap for a default-size mark; the selected mark shows dots to reshape it. An angle prints its degrees, measured on the picture in pixels. Marks are stored as fractions of the image (`src/drawing.js`, tested in `src/drawing.test.js`), the clean still is kept, and a drawn-on copy (`marked`) is what the card, the review page and the portfolio show (`src/stills.js`).
+
+**Body** runs MediaPipe on the still, on this device, in IMAGE mode (one worker, closed after a minute idle), and draws the skeleton. Each clearly visible joint (elbows, shoulders, hips, knees, left and right as the kid's own) reads its angle; tapping a reading, or tapping a joint with Angle, adds it as an ordinary angle mark the coach can adjust. The pose is kept on the frame. Readings change with where the camera stood and are for pointing, not grading (`src/pose.js`).
+
+## Voice-overs
+
+**Record a voice-over** (Watch tab) opens the clip on a 1280×720 canvas the coach plays, pauses, steps, slows and draws on (Freehand, Arrow, Circle), with their own camera in a corner if they switch **My camera** on. **Start recording** captures that canvas and the microphone together (MediaRecorder; echo cancellation and noise suppression on); a meter shows the mic level. Afterwards: **Keep voice-over** or **Record again**. Voice-overs are kept on this device in their own IndexedDB store, beside the take, and deleted with it. On Share, a voice-over can go with the next portfolio clip: the service converts it to H.264/AAC at 1280×720 (up to ten minutes), serves it at `/reviews/:id/voiceover` under the same rules as the clip, and deletes the upload afterwards (`src/voiceover.js`, `src/VoiceRecorder.jsx`).
+
+## Tags, search and model clips
+
+The Coach tab has **Tags**: type one, or tap a suggestion from the take's course, obstacles, skills, failed obstacles and the tags already in use; up to twelve, deduplicated ignoring case. Takes has a search over kid, course, obstacles and skills, notes, cue, grade, tags, model title and month (every word must match; `#tag` matches a tag), a month select and chips for the most-used tags (`src/search.js`).
+
+On Share, **Use as a model clip** marks a take as an example of how a skill should look, with a title and what to watch for. A model needs no kid, so it leaves To assign and the Floor's banner and shows under **Models**. Side by side ranks a model of the same course right after the kid's own runs and picks it when the kid has no clean run of the course, or one sharing a tag; its still's note names the model and what to watch for.
+
+## Needs you
+
+The Floor lists kids who need a coach, one reason each, kids in the gym first: a cue given on their newest take and nothing filmed since; two or more tries on a course with no clean run; here today and not filmed; nothing filmed in 14 days. Runs come from this device and the service. **Up next** on a row makes that kid up next. It never messages anyone (`src/attention.js`).
+
+## Seen by the family
+
+Under a coach's latest message, the thread says **Seen by the family** with the time a guardian last opened it, or **Not seen by the family yet**. A published portfolio clip says who in the family played it, how many times and when last, or that nobody has yet; a coach's own plays don't count, and families never see either (`server/views.js`, `familySeenAt` in `server/messages.js`). The portfolio card checks again every 20 seconds while published.
+
+## Camera angles
+
+The host phone turns on **Add camera angles** in the camera's settings and gets a five-letter code. Other coaches' phones choose **Be a camera angle** on the Floor, enter the code and where they stand, and keep their camera open. When the host records, every joined phone records too and notes when its first frame was in service time (each phone maps its clock onto the service's from every poll); when the host stops, each phone sends its clip. After the host keeps its take, the clips come onto the host phone over the next ten minutes as takes of the same kid, marked with the camera's name, and the service drops its copy. A retake on the host throws the other clips away. On the take, **Camera angles** opens Side by side lined up at the same instant ("Recorded together"); Nudge B covers a frame or two of start delay. Assigning a kid assigns every angle of the recording. Up to four extra cameras (`server/angles.js`, `src/angles.js`, `src/AngleCamera.jsx`).
 
 ## Hosted copy for phones
 
@@ -111,7 +149,7 @@ These use the local service (`npm run service`), so they work across devices onc
 - **Messages** (Messages tab). One thread per kid, between any coach and that kid's family. **Write** on a take's Share tab opens the thread with the take's run attached. Families read and reply on the LAB app's Portfolio page; kids read only. Unread counts show in the tab bar. Authors can delete their own messages; coaches can delete any. Names come from the roster, never from what a client sends.
 - **Gym list.** `GET /here?date=` and `POST /here` hold who's in the gym per day, for staff only.
 
-Service routes (all need a session): `POST/GET /runs`, `DELETE /runs/:id`, `GET /courses`, `GET /leaderboard?course=&period=week|month|all`, `POST/GET /teams`, `GET /teams/:idOrCode`, `POST /teams/:id/live|result|close`, `GET /threads`, `GET/POST /threads/:member`, `DELETE /threads/:member/:messageId`, `GET/POST /here`. Writes to runs, teams and the gym list are coach-only; every read is scoped to the account's members. Rules live in `server/runs.js`, `server/teams.js`, `server/messages.js` and `server/here.js`, each with tests.
+Service routes (all need a session): `POST/GET /runs`, `DELETE /runs/:id`, `GET /courses`, `GET /leaderboard?course=&period=week|month|all`, `POST/GET /teams`, `GET /teams/:idOrCode`, `POST /teams/:id/live|result|close`, `GET /threads`, `GET/POST /threads/:member`, `DELETE /threads/:member/:messageId`, `GET/POST /here`, `GET /reviews/:id/voiceover`, `POST /angles`, `GET /angles/:code`, `POST /angles/:code/join|leave|start|stop|discard|close`, `GET/POST /angles/:code/clips`, `GET/DELETE /angles/:code/clips/:id`. Writes to runs, teams and the gym list are coach-only; every read is scoped to the account's members. Rules live in `server/runs.js`, `server/teams.js`, `server/messages.js` and `server/here.js`, each with tests.
 
 ## Course attempts
 

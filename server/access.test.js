@@ -38,6 +38,18 @@ test("portfolio requires matching analyzed interval, roster identity, route and 
     { cue: "" },
     { course: { name: "Course", points: [] } },
     { analysis: { status: "queued", start: 1, end: 3 } },
+    { voiceoverAssetId: 5 },
+    { voiceoverAssetId: "" },
   ])
     assert.throws(() => validateReview({ ...review, ...change }, members));
+});
+test("a voice-over is only claimed by the service's render, not the coach", () => {
+  const body = {
+    ...review,
+    voiceoverAssetId: "v1",
+    voiceover: { duration: 9 },
+  };
+  validateReview(body, [{ id: "theo" }]);
+  assert.equal(body.voiceover, undefined);
+  assert.equal(body.voiceoverAssetId, "v1");
 });

@@ -1,0 +1,201 @@
+/* ============================================
+   LAB REPLAY · DRAWING ON A FRAME
+   Full screen over the take, like the camera: the frame as large as it
+   fits, the tools underneath. Tokens only.
+   ============================================ */
+
+.rp-draw {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--ds-black);
+  color: var(--ds-white);
+}
+.rp-draw .ds-iconbtn {
+  color: var(--ds-white);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+}
+.rp-draw .ds-iconbtn:disabled {
+  opacity: 0.35;
+}
+
+.rp-draw-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: calc(var(--ds-space-3) + env(safe-area-inset-top)) var(--ds-space-4)
+    var(--ds-space-3);
+}
+.rp-draw-title {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.rp-draw-title b,
+.rp-draw-title small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-draw-title small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-on-ink-2);
+}
+
+.rp-draw-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 var(--ds-space-3);
+  overflow: hidden;
+}
+.rp-draw-frame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+}
+.rp-draw-frame img,
+.rp-draw-frame canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.rp-draw-frame img {
+  object-fit: fill;
+  user-select: none;
+  pointer-events: none;
+}
+.rp-draw-frame canvas {
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.rp-draw-bar {
+  display: grid;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4)
+    calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+}
+.rp-draw-tools {
+  display: flex;
+  gap: var(--ds-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rp-draw-tools button {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  flex: 1 0 64px;
+  min-height: 60px;
+  padding: var(--ds-space-1) var(--ds-space-2);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  color: var(--ds-text-on-ink-2);
+  font-size: var(--ds-text-label);
+  font-weight: 700;
+}
+.rp-draw-tools button[aria-checked="true"] {
+  background: var(--ds-cyan);
+  color: var(--ds-navy);
+}
+.rp-draw-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-draw-inks {
+  display: flex;
+  gap: var(--ds-space-2);
+}
+.rp-draw-inks button {
+  width: var(--ds-target);
+  height: var(--ds-target);
+  border-radius: 50%;
+  background: var(--ink);
+  box-shadow: inset 0 0 0 3px var(--ds-black);
+  border: 2px solid transparent;
+}
+.rp-draw-inks button[aria-checked="true"] {
+  border-color: var(--ds-white);
+}
+.rp-draw-text {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.rp-draw-acts {
+  display: flex;
+  gap: var(--ds-space-2);
+  margin-left: auto;
+}
+
+@media (min-width: 900px) {
+  .rp-draw-bar {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+  .rp-draw-tools button {
+    flex: 0 0 72px;
+  }
+}
+
+/* ---------- The body ---------- */
+.rp-draw-body {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+  color: var(--ds-white);
+  font-weight: 700;
+}
+.rp-draw-body[aria-pressed="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+.rp-draw-joints {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--ds-space-2);
+  min-width: 0;
+}
+.rp-draw-joints p {
+  margin: 0;
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-draw-joints ul {
+  display: flex;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rp-draw-joints li {
+  flex: none;
+  font-size: var(--ds-text-small);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-draw-joints button {
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--ds-white) 30%, transparent);
+  color: var(--ds-white);
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.rp-draw-joints button b {
+  color: var(--ds-gold);
+}

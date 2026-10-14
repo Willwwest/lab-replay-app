@@ -1,7 +1,14 @@
 // State for the Replay screen, one hook per concern: the local library,
 // the editing draft of a take, the camera, analysis jobs, the roster
 // connection, a take's portfolio review and the toast.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { all, put, remove } from "./storage.js";
 import { recoverJob, requestJob, transition } from "./domain.js";
 import { analyze } from "./analysis.js";
@@ -64,11 +71,49 @@ export function useLibrary(onError) {
     jobState.current = jobState.current.filter((j) => j.takeId !== take.id);
     setJobs(jobState.current);
     await remove("attempts", take.id);
+    for (const v of await all("voiceovers"))
+      if (v.takeId === take.id) await remove("voiceovers", v.id);
     await remove("takes", take.id);
     setTakes((old) => old.filter((t) => t.id !== take.id));
   }
 
   return { takes, jobs, ready, saveTake, saveJob, removeTake, jobState };
+}
+
+/* ---------- A take's voice-overs ---------- */
+
+// Kept on this device beside the take, newest first.
+export function useVoiceovers(takeId) {
+  const [list, setList] = useState([]);
+  useEffect(() => {
+    let live = true;
+    setList([]);
+    if (takeId)
+      all("voiceovers")
+        .then((v) => {
+          if (live)
+            setList(
+              v
+                .filter((x) => x.takeId === takeId)
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+            );
+        })
+        .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [takeId]);
+  return {
+    list,
+    async add(v) {
+      await put("voiceovers", v);
+      setList((old) => [v, ...old]);
+    },
+    async drop(id) {
+      await remove("voiceovers", id);
+      setList((old) => old.filter((x) => x.id !== id));
+    },
+  };
 }
 
 /* ---------- The take being edited ---------- */
@@ -86,6 +131,8 @@ export const DRAFT_FIELDS = [
   "cue",
   "courseMap",
   "frames",
+  "tags",
+  "model",
 ];
 
 const pick = (take) =>
@@ -445,6 +492,29 @@ export function useRoster(onError) {
   };
 }
 
+/* ---------- Shared course runs ---------- */
+
+// Every course run coaches have shared, for the Floor's Needs you list.
+// Refreshed each minute and whenever `version` changes (a run was saved).
+export function useSharedRuns(shared, version) {
+  const [runs, setRuns] = useState([]);
+  useEffect(() => {
+    if (!shared) return setRuns([]);
+    let live = true;
+    const load = () =>
+      api("/runs")
+        .then((r) => live && setRuns(r))
+        .catch(() => {});
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      live = false;
+      clearInterval(t);
+    };
+  }, [shared, version]);
+  return runs;
+}
+
 /* ---------- Who's in the gym today ---------- */
 
 export const todayKey = (d = new Date()) =>
@@ -499,10 +569,32 @@ export function useHere(roster) {
 
 /* ---------- A take's portfolio review on the service ---------- */
 
+// A service file as an object URL for as long as `path` stays the same.
+function useBlobFrom(path, setUrl, setError) {
+  useEffect(() => {
+    let live = true;
+    let u;
+    setUrl("");
+    if (path)
+      api(path, { video: true })
+        .then((blob) => {
+          u = URL.createObjectURL(blob);
+          if (live) setUrl(u);
+          else URL.revokeObjectURL(u);
+        })
+        .catch((e) => setError(e.message));
+    return () => {
+      live = false;
+      if (u) URL.revokeObjectURL(u);
+    };
+  }, [path]);
+}
+
 export function usePortfolio(take) {
   const [review, setReview] = useState(null);
   const [error, setError] = useState("");
   const [url, setUrl] = useState("");
+  const [voiceUrl, setVoiceUrl] = useState("");
   const id = take?.portfolioId;
 
   useEffect(() => {
@@ -514,39 +606,31 @@ export function usePortfolio(take) {
         .catch((e) => setError(e.message));
   }, [take?.id, id]);
 
-  // Poll while the service renders.
+  // Poll while the service renders, and now and then once it's published,
+  // to see whether the family has watched it.
   useEffect(() => {
-    if (review?.status !== "rendering") return;
+    const every = { rendering: 2000, published: 20000 }[review?.status];
+    if (!every) return;
     const timer = setInterval(
       () =>
         api("/reviews/" + review.id)
           .then(setReview)
           .catch((e) => setError(e.message)),
-      2000,
+      every,
     );
     return () => clearInterval(timer);
   }, [review?.id, review?.status]);
 
-  // The prepared MP4, once there is one.
-  useEffect(() => {
-    let live = true;
-    let u;
-    setUrl("");
-    if (["ready", "published", "withdrawn"].includes(review?.status))
-      api("/reviews/" + review.id + "/video", { video: true })
-        .then((blob) => {
-          u = URL.createObjectURL(blob);
-          if (live) setUrl(u);
-          else URL.revokeObjectURL(u);
-        })
-        .catch((e) => setError(e.message));
-    return () => {
-      live = false;
-      if (u) URL.revokeObjectURL(u);
-    };
-  }, [review?.id, review?.status]);
+  // The prepared MP4 (and the voice-over), once there is one.
+  const prepared = ["ready", "published", "withdrawn"].includes(review?.status);
+  useBlobFrom(prepared && "/reviews/" + review.id + "/video", setUrl, setError);
+  useBlobFrom(
+    prepared && review.voiceover && "/reviews/" + review.id + "/voiceover",
+    setVoiceUrl,
+    setError,
+  );
 
-  return { review, setReview, error, setError, url };
+  return { review, setReview, error, setError, url, voiceUrl };
 }
 
 /* ---------- Toast ---------- */
@@ -567,6 +651,25 @@ export function useToast() {
     [],
   );
   return { toast, say, fail, clear: () => setToast(null) };
+}
+
+// The size, in CSS pixels, that keeps a w × h picture's shape and fits
+// the element `ref` points at; follows the element as it resizes.
+export function useFit(ref, w, h) {
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    if (!w || !h || !ref.current) return;
+    const fit = () => {
+      const r = ref.current.getBoundingClientRect();
+      const s = Math.min(r.width / w, r.height / h);
+      setBox({ w: Math.floor(w * s), h: Math.floor(h * s) });
+    };
+    fit();
+    const o = new ResizeObserver(fit);
+    o.observe(ref.current);
+    return () => o.disconnect();
+  }, [w, h]);
+  return box;
 }
 
 // The app bar turns into an ink capsule once the page scrolls.

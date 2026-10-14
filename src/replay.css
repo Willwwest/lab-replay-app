@@ -5,14 +5,9 @@
    ============================================ */
 
 /* ---------- App bar ---------- */
-.rp-brand-name {
-  padding-left: var(--ds-space-3);
-  border-left: 1px solid color-mix(in srgb, var(--ds-white) 30%, transparent);
-  font-family: var(--ds-font-display);
-  font-size: var(--ds-text-h3);
-  font-weight: 800;
-  line-height: 1;
-  color: var(--ds-white);
+/* LAB over REPLAY, stacked: taller than the plain LAB mark it replaces. */
+img.rp-brand-lockup {
+  height: 48px;
 }
 .rp-account {
   position: relative;
@@ -195,6 +190,32 @@
   justify-self: start;
 }
 
+/* ---------- Camera angles ---------- */
+.rp-angles-takes {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-angles-takes li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-2) var(--ds-space-3);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+}
+.rp-angles-takes span {
+  display: grid;
+  min-width: 0;
+}
+.rp-angles-takes small {
+  color: var(--ds-text-2);
+  font-size: var(--ds-text-small);
+}
+
 /* ---------- Course map ---------- */
 .rp-course-pick {
   display: flex;
@@ -337,6 +358,30 @@
   border-radius: var(--ds-radius-md);
   background: var(--ds-black);
 }
+.rp-portfolio-seen {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-surface-muted);
+  color: var(--ds-text-2);
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+}
+.rp-portfolio-seen.is-seen {
+  background: var(--ds-good-bg);
+  color: var(--ds-good);
+}
+.rp-portfolio-seen svg {
+  flex: none;
+}
+.rp-portfolio-voice {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+}
 
 /* ---------- Hover (mouse only) ---------- */
 
@@ -355,9 +400,8 @@
 }
 
 @media (max-width: 760px) {
-  .rp-brand-name {
-    font-size: var(--ds-text-body);
-    padding-left: var(--ds-space-2);
+  img.rp-brand-lockup {
+    height: 38px;
   }
 
   .rp-clip-bounds {

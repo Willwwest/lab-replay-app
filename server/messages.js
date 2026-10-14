@@ -72,3 +72,21 @@ export function threads(account, members, messages, reads) {
       (b.last?.createdAt ?? "").localeCompare(a.last?.createdAt ?? ""),
     );
 }
+
+// When the kid's family last opened the thread: the latest read by any
+// guardian account of a family the kid belongs to, or null. `rows` are the
+// stored reads, { account: "guardian:<family>", member, at }.
+export function familySeenAt(rows, families, memberId) {
+  const keys = new Set(
+    families
+      .filter((f) => f.kids.includes(memberId))
+      .map((f) => `guardian:${f.id}`),
+  );
+  return (
+    rows
+      .filter((r) => r.member === memberId && keys.has(r.account))
+      .map((r) => r.at)
+      .sort()
+      .at(-1) ?? null
+  );
+}

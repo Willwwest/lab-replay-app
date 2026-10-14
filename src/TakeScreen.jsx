@@ -28,6 +28,15 @@ import CourseEditor from "./CourseEditor.jsx";
 import AttemptReview from "./AttemptReview.jsx";
 import PortfolioDelivery from "./PortfolioDelivery.jsx";
 import AnalysisCard from "./AnalysisCard.jsx";
+import FrameEditor from "./FrameEditor.jsx";
+import { flatten } from "./stills.js";
+import { detectStill } from "./analysis.js";
+import VoiceOvers from "./VoiceOvers.jsx";
+import VoiceRecorder from "./VoiceRecorder.jsx";
+import { useVoiceovers } from "./hooks.js";
+import { suggestTags } from "./search.js";
+import ModelCard from "./ModelCard.jsx";
+import Angles from "./Angles.jsx";
 import { day, stamp } from "./format.js";
 import { analysisFor, steps } from "./workflow.js";
 
@@ -47,6 +56,29 @@ const STAGES = [
 
 export default function TakeScreen({ t, take, tab, onTab, ops }) {
   const [comparing, setComparing] = useState(false);
+  const [drawing, setDrawing] = useState(null); // a key frame's id
+  const drawn = t.frames.find((f) => f.id === drawing);
+  const voices = useVoiceovers(t.id);
+  const [talking, setTalking] = useState(false);
+
+  // The marks (and the body, if shown), and a copy of the still with them
+  // drawn in. A body found once stays with the frame, shown or not.
+  async function keepDrawing(shapes, { pose, body, layers }) {
+    const any = shapes.length > 0 || body;
+    const marked = any ? await flatten(drawn.image, shapes, layers) : null;
+    ops.edit({
+      frames: t.frames.map((f) =>
+        f.id === drawn.id
+          ? {
+              ...f,
+              drawing: any ? { shapes, body } : null,
+              marked,
+              pose: pose ?? f.pose ?? null,
+            }
+          : f,
+      ),
+    });
+  }
   const done = analysisFor(ops.jobs, t.start, t.end);
   const progress = steps(t, ops.jobs, ops.portfolio.review);
   const isDone = (id) => progress.find((s) => s.id === id)?.done;
@@ -62,6 +94,10 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
       loop={ops.loop}
       onSeek={ops.seek}
       onSaveFrame={ops.saveFrame}
+      onDraw={async () => {
+        const f = await ops.saveFrame();
+        if (f) setDrawing(f.id);
+      }}
       onError={ops.fail}
     />
   );
@@ -72,7 +108,7 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
         back="Takes"
         onBack={ops.back}
         eyebrow={`${day(t.createdAt)} · ${stamp(t.duration)}`}
-        title={t.member || "No kid yet"}
+        title={t.member || t.model?.title || "No kid yet"}
         sub={t.courseMap?.name || t.course || "Recording"}
         actions={
           <Button
@@ -133,6 +169,22 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
               sampled={done?.result.frames ?? []}
               onChange={ops.edit}
               onSeek={ops.seek}
+              onDraw={setDrawing}
+            />
+            <Angles
+              take={t}
+              takes={ops.takes}
+              onCompare={(id) => {
+                ops.setCompareWith({ id, n: Date.now() });
+                setComparing(true);
+              }}
+            />
+            <VoiceOvers
+              voices={voices}
+              onRecord={() => {
+                ops.video.current?.pause();
+                setTalking(true);
+              }}
             />
             {comparing ? (
               <Compare
@@ -149,7 +201,7 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
               <Card pad="md" className="rp-compare-cta">
                 <CardHead
                   title="Compare with another run"
-                  note="Play this take beside an earlier one, lined up at the same obstacle."
+                  note="Play this take beside an earlier one or a model clip, lined up at the same obstacle."
                   aside={
                     <Button
                       variant="secondary"
@@ -198,6 +250,7 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
           <CoachReview
             take={t}
             analysis={done}
+            suggestions={suggestTags(t, ops.takes)}
             onChange={ops.edit}
             onExport={ops.exportReview}
           />
@@ -214,11 +267,13 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
                 take={t}
                 jobs={ops.jobs}
                 portfolio={ops.portfolio}
+                voices={voices.list}
                 connected={ops.shared}
                 onCommit={ops.commit}
                 onSay={ops.say}
               />
             </Section>
+            <ModelCard take={t} coach={ops.coach} onChange={ops.edit} />
             <Card as="section" pad="md" aria-label="Family">
               <CardHead
                 title="Message the family"
@@ -273,6 +328,30 @@ export default function TakeScreen({ t, take, tab, onTab, ops }) {
               </div>
             </Card>
           </>
+        )}
+        {drawn && (
+          <FrameEditor
+            key={drawn.id}
+            frame={drawn}
+            onDone={keepDrawing}
+            findBody={detectStill}
+            onClose={() => setDrawing(null)}
+          />
+        )}
+        {talking && (
+          <VoiceRecorder
+            take={t}
+            url={ops.url}
+            caption={[t.member, t.courseMap?.name || t.course]
+              .filter(Boolean)
+              .join(" · ")}
+            coach={ops.coach}
+            onSave={async (v) => {
+              await voices.add(v);
+              ops.say("Voice-over saved with the take.");
+            }}
+            onClose={() => setTalking(false)}
+          />
         )}
         {!take && (
           <Card>

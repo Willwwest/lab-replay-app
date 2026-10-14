@@ -25,13 +25,10 @@
   width: min(520px, 100%);
 }
 .rp-gate-logo {
-  height: 44px;
+  height: 72px;
   width: auto;
   justify-self: start;
   margin-bottom: var(--ds-space-4);
-}
-.rp-gate .eyebrow {
-  color: var(--ds-sky);
 }
 .rp-gate h1 {
   font-family: var(--ds-font-display);
@@ -561,7 +558,7 @@
   .rp-tc-main {
     grid-template-columns: auto minmax(0, 1fr);
   }
-  .rp-tc-main .ds-tag {
+  .rp-tc-main > .rp-tags {
     grid-column: 2;
     justify-self: start;
   }
@@ -571,4 +568,109 @@
   .rp-sheet {
     animation: none;
   }
+}
+
+/* Tags on a take (Coach tab) */
+.rp-tagfield {
+  display: grid;
+  gap: var(--ds-space-3);
+}
+.rp-tagfield-list,
+.rp-tagfield-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-tagfield-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-sky-pale);
+  color: var(--ds-navy);
+  font-weight: 700;
+  font-size: var(--ds-text-small);
+}
+
+/* Finding takes */
+.rp-find {
+  display: grid;
+  gap: var(--ds-space-3);
+  min-width: 0;
+}
+.rp-find-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-find-row > .ds-field {
+  flex: 0 1 220px;
+}
+.rp-find-q {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.rp-find-q > svg {
+  position: absolute;
+  left: var(--ds-space-4);
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--ds-text-2);
+  pointer-events: none;
+}
+.rp-find-q .ds-input {
+  padding-left: calc(var(--ds-space-4) + 26px);
+}
+.rp-find .ds-input,
+.rp-find .ds-select select {
+  background: var(--ds-surface);
+  border-color: var(--ds-border-strong);
+}
+.rp-find-tags {
+  display: flex;
+  gap: var(--ds-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rp-find-tags .ds-chip {
+  flex: none;
+}
+
+/* Needs you (Floor) */
+.rp-needs {
+  display: grid;
+  gap: var(--ds-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-need {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-surface);
+  border: 1px solid var(--ds-border);
+}
+.rp-need-text {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+}
+.rp-need-text b {
+  color: var(--ds-navy);
+}
+.rp-need-text small {
+  color: var(--ds-text-2);
+  font-size: var(--ds-text-small);
+  overflow-wrap: anywhere;
 }

@@ -1,6 +1,6 @@
 // The take's video with frame-level transport, and the clip to analyze.
 import React from "react";
-import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import {
   Button,
   Card,
@@ -31,6 +31,7 @@ export function Player({
   loop,
   onSeek,
   onSaveFrame,
+  onDraw,
   onError,
 }) {
   return (
@@ -94,6 +95,15 @@ export function Player({
           </Button>
           <Button size="sm" icon={Bookmark} onClick={onSaveFrame}>
             Save frame
+          </Button>
+          <Button
+            variant="light"
+            size="sm"
+            icon={Pencil}
+            title="Save this frame and draw on it"
+            onClick={onDraw}
+          >
+            Draw
           </Button>
         </div>
       </div>

@@ -105,6 +105,26 @@
   --ds-station-court: #ffe5b8;
   --ds-station-course: #d9e3ff;
 
+  /* Floor board (TV): what a zone is doing, read from across the gym */
+  --ds-zone-class: #f2b01e;
+  --ds-zone-open: #3fe0ae;
+  --ds-zone-paused: #ff5a4e;
+  --ds-zone-closed: #464b66;
+  --ds-zone-amenity: #8ea3c9;
+
+  /* Floor board 3D scene: materials seen in the gym */
+  --ds-scene-void: #04060d;
+  --ds-scene-floor: #121a30;
+  --ds-scene-wall: #0b1020;
+  --ds-scene-turf: #b9c0cd;
+  --ds-scene-red: #c8243a;
+  --ds-scene-blue: #2147b8;
+  --ds-scene-truss: #d5dae3;
+  --ds-scene-wood: #c99a5b;
+  --ds-scene-black: #23262f;
+  --ds-scene-white: #f2f4f8;
+  --ds-scene-screen: #22bced;
+
   /* Type */
   --ds-font-display: Argentum, "Work Sans", sans-serif;
   --ds-font-body: "Work Sans", Arial, sans-serif;

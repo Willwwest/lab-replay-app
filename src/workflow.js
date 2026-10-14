@@ -51,10 +51,16 @@ export const isChecked = (take) =>
   take.checked.start === take.start &&
   take.checked.end === take.end;
 
+// A take waiting for a kid. A model clip may have none: it shows how a
+// skill should look, whoever did it.
+export const needsKid = (take) => !take.memberId && !take.model;
+
 // Where a take is, in one word, for lists: who it belongs to first, then
 // whether it's been checked, analyzed and shared.
 export function takeStatus(take, jobs = []) {
   const own = jobs.filter((j) => j.takeId === take.id);
+  if (!take.memberId && take.model)
+    return { id: "model", label: "Model", tone: "brand" };
   if (!take.memberId) return { id: "assign", label: "To assign", tone: "warn" };
   if (own.some((j) => ["queued", "running"].includes(j.status)))
     return { id: "analyzing", label: "Analyzing", tone: "info" };

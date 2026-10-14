@@ -14,10 +14,9 @@ export default function CoachGate({ coaches, onChoose }) {
       <div className="rp-gate-inner">
         <img
           className="rp-gate-logo"
-          src={asset("lab-white.svg")}
-          alt="The LAB — Learn. Adapt. Build."
+          src={asset("lab-replay-white.svg")}
+          alt="LAB Replay"
         />
-        <span className="eyebrow">Replay</span>
         <h1>Who's coaching?</h1>
         <p>Saved on this device. Switch any time from the menu.</p>
         <ul className="rp-gate-coaches" aria-label="Coaches">

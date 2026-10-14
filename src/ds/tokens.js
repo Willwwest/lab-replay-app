@@ -27,6 +27,29 @@ export const data = {
   seq: ["#e3f6fd", "#b4e7f8", "#6fd0f1", "#22aee0", "#0b86b5", "#075c80"],
 };
 
+// The floor board (TV) and its 3D scene.
+export const zone = {
+  class: "#f2b01e",
+  open: "#3fe0ae",
+  paused: "#ff5a4e",
+  closed: "#464b66",
+  amenity: "#8ea3c9",
+};
+
+export const scene = {
+  void: "#04060d",
+  floor: "#121a30",
+  wall: "#0b1020",
+  turf: "#b9c0cd",
+  red: "#c8243a",
+  blue: "#2147b8",
+  truss: "#d5dae3",
+  wood: "#c99a5b",
+  black: "#23262f",
+  white: "#f2f4f8",
+  screen: "#22bced",
+};
+
 // "r,g,b" and "rgba(r,g,b,a)" from a token, for canvas and SVG attributes
 // that can't read CSS variables.
 export const rgb = (hex) => {
@@ -68,4 +91,10 @@ export const cssNames = {
   "data.seq.3": "--ds-seq-4",
   "data.seq.4": "--ds-seq-5",
   "data.seq.5": "--ds-seq-6",
+  ...Object.fromEntries(
+    Object.keys(zone).map((k) => [`zone.${k}`, `--ds-zone-${k}`]),
+  ),
+  ...Object.fromEntries(
+    Object.keys(scene).map((k) => [`scene.${k}`, `--ds-scene-${k}`]),
+  ),
 };

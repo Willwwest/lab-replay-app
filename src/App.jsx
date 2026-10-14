@@ -23,6 +23,7 @@ import {
   usePortfolio,
   useRoster,
   useScrolled,
+  useSharedRuns,
   useToast,
   videoDuration,
 } from "./hooks.js";
@@ -33,8 +34,12 @@ import { api } from "./service.js";
 import { pushRun, syncPending } from "./sync.js";
 import { buildAttempt, progressFor } from "./attempts.js";
 import { download, firstName, reviewHtml, videoExtension } from "./format.js";
+import { shared } from "./stills.js";
 import { runKey, createRun } from "./runs.js";
-import { takeStatus } from "./workflow.js";
+import { needsKid, takeStatus } from "./workflow.js";
+import { allRuns, attention } from "./attention.js";
+import { awaitingAngles, importAngles, useAngleHost } from "./angles.js";
+import AngleCamera from "./AngleCamera.jsx";
 import "./replay.css";
 import "./coach.css";
 
@@ -88,11 +93,18 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
     ...read(SETTINGS, {}),
   }));
   const [takesFilter, setTakesFilter] = useState(null);
+  const [takesSearch, setTakesSearch] = useState({
+    query: "",
+    tag: "",
+    month: "",
+  });
   const [teamId, setTeamId] = useState(
     () => sessionStorage.getItem(TEAM) ?? "",
   );
   const [thread, setThread] = useState(null);
   const [compareWith, setCompareWith] = useState(null);
+  const [beAngle, setBeAngle] = useState(false);
+  const angleHost = useAngleHost(roster.shared);
   const [boardVersion, setBoardVersion] = useState(0);
   const [now, setNow] = useState(0);
   const [speed, setSpeed] = useState(1);
@@ -117,7 +129,18 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
   const weekCount = library.jobs.filter(
     (j) => Date.now() - Date.parse(j.requestedAt) < 7 * 864e5,
   ).length;
-  const toAssign = library.takes.filter((x) => !x.memberId).length;
+  const toAssign = library.takes.filter(needsKid).length;
+  const sharedRuns = useSharedRuns(roster.shared, boardVersion);
+  const needs = useMemo(
+    () =>
+      attention({
+        members: roster.members,
+        here: here.ids,
+        takes: library.takes,
+        runs: allRuns(library.takes, sharedRuns),
+      }),
+    [roster.members, here.ids, library.takes, sharedRuns],
+  );
 
   const perform =
     (fn) =>
@@ -161,6 +184,27 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
     return () => URL.revokeObjectURL(u);
   }, [take?.id, take?.blob]);
 
+  // Other cameras' clips of takes kept here come in for a while after.
+  const importing = useRef(false);
+  const waiting = roster.shared && awaitingAngles(library.takes).length > 0;
+  useEffect(() => {
+    if (!waiting) return;
+    const pull = async () => {
+      if (importing.current) return;
+      importing.current = true;
+      try {
+        const n = await importAngles(library.takes, library.saveTake);
+        if (n) say(`${n} more camera angle${n === 1 ? "" : "s"} came in.`);
+      } catch {
+      } finally {
+        importing.current = false;
+      }
+    };
+    pull();
+    const t = setInterval(pull, 3000);
+    return () => clearInterval(t);
+  }, [waiting, library.takes]);
+
   // A clip sent for analysis on this device starts as soon as it's free.
   useEffect(() => {
     if (analysis.busy) return;
@@ -202,8 +246,18 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
   // Everything the camera keeps becomes a take; timed runs also save the
   // scored attempt and share it.
   async function saveCapture(result) {
-    const { takeId, kid, mode, course, run, attempt, blob, duration, burned } =
-      result;
+    const {
+      takeId,
+      kid,
+      mode,
+      course,
+      run,
+      attempt,
+      blob,
+      duration,
+      burned,
+      sync,
+    } = result;
     const member = kid
       ? { memberId: kid.id ?? kid.memberId, member: kid.name ?? kid.member }
       : { memberId: "", member: "" };
@@ -227,6 +281,7 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
       cue: "",
       grade: "Not reviewed",
       burned: !!burned,
+      ...(sync ? { sync } : {}),
       thumb: await thumbnail(blob),
       ...(mode === "course" && course
         ? {
@@ -297,8 +352,13 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
     const m = roster.members.find((x) => x.id === memberId);
     if (!stored || !m) return;
     const fields = { memberId: m.id, member: m.name };
-    await library.saveTake({ ...stored, ...fields });
-    if (takeId === selectedId) draft.patch(fields);
+    // Other cameras' takes of the same recording are the same kid.
+    const group = stored.sync?.group;
+    for (const x of library.takes)
+      if (x.id === takeId || (group && x.sync?.group === group)) {
+        await library.saveTake({ ...x, ...fields });
+        if (x.id === selectedId) draft.patch(fields);
+      }
     say(`Assigned to ${m.name}.`);
   }
 
@@ -326,21 +386,19 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
   function saveFrame() {
     const v = video.current;
     if (!v?.videoWidth) throw Error("Wait for the video to load.");
+    v.pause();
     const c = document.createElement("canvas");
     c.width = 640;
     c.height = (640 * v.videoHeight) / v.videoWidth;
     c.getContext("2d").drawImage(v, 0, 0, c.width, c.height);
-    edit({
-      frames: [
-        ...t.frames,
-        {
-          id: crypto.randomUUID(),
-          time: v.currentTime,
-          image: c.toDataURL("image/jpeg", 0.8),
-          note: "",
-        },
-      ],
-    });
+    const frame = {
+      id: crypto.randomUUID(),
+      time: v.currentTime,
+      image: c.toDataURL("image/jpeg", 0.8),
+      note: "",
+    };
+    edit({ frames: [...t.frames, frame] });
+    return frame;
   }
 
   const ops = {
@@ -366,6 +424,7 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
     commit,
     say,
     fail,
+    coach: roster.coach.name,
     compareWith,
     setCompareWith,
     back: () => go("takes"),
@@ -407,7 +466,7 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
     },
     exportReview: () =>
       download(
-        new Blob([reviewHtml(t, t.frames)], { type: "text/html" }),
+        new Blob([reviewHtml(t, t.frames.map(shared))], { type: "text/html" }),
         "lab-replay-review.html",
       ),
     downloadOriginal: () =>
@@ -513,6 +572,8 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
           ready={library.ready}
           filter={filter}
           onFilter={setTakesFilter}
+          search={takesSearch}
+          onSearch={setTakesSearch}
           onOpen={(id) => open(id)}
           onAssign={(id) => setPicker({ purpose: "assign", takeId: id })}
           onRecord={() => openCapture("record")}
@@ -584,9 +645,11 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
           onUpNext={setUpNext}
           takes={library.takes}
           jobs={library.jobs}
+          needs={needs}
           onRecord={() => openCapture("record")}
           onTimed={() => openCapture("course")}
           onImport={() => file.current.click()}
+          onBeAngle={() => setBeAngle(true)}
           onManageHere={() => setPicker({ purpose: "here" })}
           onOpen={(id) => open(id)}
           onAssign={(id) => setPicker({ purpose: "assign", takeId: id })}
@@ -641,6 +704,13 @@ function Coaching({ roster, toast: { toast, say, fail, clear } }) {
             go(`take/${id}/watch`, { replace: true });
           }}
           team={capture.team}
+          angles={angleHost}
+        />
+      )}
+      {beAngle && (
+        <AngleCamera
+          connected={roster.shared}
+          onClose={() => setBeAngle(false)}
         />
       )}
 

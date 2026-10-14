@@ -114,6 +114,17 @@
   font-weight: 700;
   color: var(--ds-text-3);
 }
+.rp-msg-seen {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-1);
+  font-size: var(--ds-text-label);
+  font-weight: 600;
+  color: var(--ds-text-3);
+}
+.rp-msg-seen.is-seen {
+  color: var(--ds-good);
+}
 .rp-msg-run {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

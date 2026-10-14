@@ -1,0 +1,226 @@
+/* ============================================
+   LAB REPLAY · VOICE-OVER
+   The recorder is full screen like the camera and the frame editor; the
+   list of a take's voice-overs sits on its Watch tab. Tokens only.
+   ============================================ */
+
+.rp-voice {
+  position: fixed;
+  inset: 0;
+  z-index: 92;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  background: var(--ds-black);
+  color: var(--ds-white);
+}
+.rp-voice .ds-iconbtn {
+  color: var(--ds-white);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+}
+.rp-voice .ds-iconbtn:disabled {
+  opacity: 0.35;
+}
+.rp-voice .ds-seg {
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--ds-white) 16%, transparent);
+}
+.rp-voice .ds-seg button {
+  color: var(--ds-text-on-ink-2);
+}
+.rp-voice .ds-seg button[aria-checked="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+
+.rp-voice-top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--ds-space-3);
+  padding: calc(var(--ds-space-3) + env(safe-area-inset-top)) var(--ds-space-4)
+    var(--ds-space-3);
+}
+.rp-voice-title {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.rp-voice-title small {
+  font-size: var(--ds-text-label);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-voice-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  padding: var(--ds-space-1) var(--ds-space-3);
+  border-radius: var(--ds-radius-pill);
+  background: var(--ds-bad);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.rp-voice-rec i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ds-white);
+  animation: rp-blink 1s steps(2) infinite;
+}
+@keyframes rp-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.rp-voice-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 var(--ds-space-3);
+  overflow: hidden;
+}
+.rp-voice-stage canvas {
+  touch-action: none;
+  cursor: crosshair;
+  border-radius: var(--ds-radius-md);
+}
+.rp-voice-review {
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-ink);
+}
+/* The take and the coach's camera play here, unseen, to be drawn. */
+.rp-voice-source {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.rp-voice-error {
+  margin: 0 var(--ds-space-4);
+  padding: var(--ds-space-3) var(--ds-space-4);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bad-bg);
+  color: var(--ds-bad);
+  font-size: var(--ds-text-small);
+  font-weight: 600;
+}
+
+.rp-voice-bar {
+  display: grid;
+  gap: var(--ds-space-3);
+  padding: var(--ds-space-3) var(--ds-space-4)
+    calc(var(--ds-space-4) + env(safe-area-inset-bottom));
+}
+.rp-voice-transport,
+.rp-voice-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-2);
+}
+.rp-voice-scrub {
+  flex: 1 1 140px;
+  min-width: 0;
+  accent-color: var(--ds-cyan);
+}
+.rp-voice-tools {
+  display: flex;
+  gap: var(--ds-space-1);
+}
+.rp-voice-tools button {
+  display: grid;
+  place-items: center;
+  width: var(--ds-target);
+  height: var(--ds-target);
+  border-radius: var(--ds-radius-md);
+  background: color-mix(in srgb, var(--ds-white) 8%, transparent);
+  color: var(--ds-text-on-ink-2);
+}
+.rp-voice-tools button[aria-checked="true"] {
+  background: var(--ds-gold);
+  color: var(--ds-navy);
+}
+.rp-voice-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  min-height: var(--ds-target);
+  padding: 0 var(--ds-space-4);
+  border-radius: var(--ds-radius-pill);
+  background: color-mix(in srgb, var(--ds-white) 10%, transparent);
+  color: var(--ds-white);
+  font-weight: 700;
+}
+.rp-voice-toggle[aria-pressed="true"] {
+  background: var(--ds-white);
+  color: var(--ds-navy);
+}
+.rp-voice-meter {
+  --level: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  margin-left: auto;
+  color: var(--ds-text-on-ink-2);
+}
+.rp-voice-meter > span[aria-hidden] {
+  width: 72px;
+  height: 8px;
+  border-radius: var(--ds-radius-pill);
+  background: linear-gradient(
+      90deg,
+      var(--ds-cyan) calc(var(--level) * 100%),
+      transparent 0
+    )
+    color-mix(in srgb, var(--ds-white) 14%, transparent);
+}
+.rp-voice-go {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--ds-space-3);
+}
+.rp-voice-go .button {
+  min-height: var(--ds-target-lg);
+  min-width: 220px;
+}
+.button.rp-voice-start,
+.button.rp-voice-stop {
+  background: var(--ds-bad);
+  border-color: var(--ds-bad);
+  color: var(--ds-white);
+}
+
+/* ---------- On the Watch tab ---------- */
+.rp-voices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--ds-space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-voices video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-black);
+}
+.rp-voice-item {
+  gap: var(--ds-space-3);
+}
+.rp-voice-item header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-voice-rec i {
+    animation: none;
+  }
+}

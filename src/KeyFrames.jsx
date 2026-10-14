@@ -1,6 +1,7 @@
-// Stills the coach chose, with a note each, and the frames analysis sampled.
+// Stills the coach chose, with a note each and any marks drawn on them,
+// and the frames analysis sampled.
 import React from "react";
-import { Bookmark, Trash2 } from "lucide-react";
+import { Bookmark, Pencil, Trash2 } from "lucide-react";
 import {
   Button,
   Card,
@@ -10,8 +11,9 @@ import {
   TextArea,
 } from "./ds/index.jsx";
 import { stamp } from "./format.js";
+import { still } from "./stills.js";
 
-export default function KeyFrames({ take, sampled, onChange, onSeek }) {
+export default function KeyFrames({ take, sampled, onChange, onSeek, onDraw }) {
   const setFrames = (frames) => onChange({ frames });
   const kept = take.frames;
   // A sampled frame the coach kept shows once, as their pick.
@@ -19,11 +21,12 @@ export default function KeyFrames({ take, sampled, onChange, onSeek }) {
   return (
     <Section
       title="Key frames"
-      note="Pause on a useful moment and save the frame. Notes go to the member with the review."
+      note="Pause on a useful moment and save the frame. Draw on it to point things out. Notes and drawings go to the member with the review."
     >
       {!kept.length && !fresh.length ? (
         <p className="rp-inline">
-          None yet. Pause on a moment and tap Save frame under the video.
+          None yet. Pause on a moment and tap Save frame or Draw under the
+          video.
         </p>
       ) : (
         <div className="rp-frames">
@@ -34,7 +37,7 @@ export default function KeyFrames({ take, sampled, onChange, onSeek }) {
                 onClick={() => onSeek(f.time)}
                 aria-label={`Play from ${stamp(f.time)}`}
               >
-                <img src={f.image} alt="" />
+                <img src={still(f)} alt="" />
                 <span>{stamp(f.time)}</span>
               </button>
               <Field label={`Note at ${stamp(f.time)}`} hideLabel>
@@ -50,13 +53,26 @@ export default function KeyFrames({ take, sampled, onChange, onSeek }) {
                 />
               </Field>
               <div className="rp-frame-foot">
-                <span className="eyebrow">Coach pick</span>
-                <IconButton
-                  label={`Remove frame at ${stamp(f.time)}`}
-                  icon={Trash2}
-                  tone="danger"
-                  onClick={() => setFrames(kept.filter((x) => x.id !== f.id))}
-                />
+                <span className="eyebrow">
+                  {f.marked ? "Drawn on" : "Coach pick"}
+                </span>
+                <div className="rp-actions">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={Pencil}
+                    aria-label={`Draw on the frame at ${stamp(f.time)}`}
+                    onClick={() => onDraw(f.id)}
+                  >
+                    Draw
+                  </Button>
+                  <IconButton
+                    label={`Remove frame at ${stamp(f.time)}`}
+                    icon={Trash2}
+                    tone="danger"
+                    onClick={() => setFrames(kept.filter((x) => x.id !== f.id))}
+                  />
+                </div>
               </div>
             </Card>
           ))}

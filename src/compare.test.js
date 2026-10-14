@@ -9,6 +9,8 @@ import {
   partner,
   span,
   splitDeltas,
+  takeLabel,
+  whose,
 } from "./compare.js";
 
 const map = {
@@ -99,4 +101,56 @@ test("split deltas compare obstacle times and totals", () => {
   assert.equal(d.total, 2);
   assert.equal(splitDeltas(a, other), null);
   assert.equal(splitDeltas(a, fail).total, null);
+});
+
+test("a model clip of the same course is the partner when there's no clean run of the kid's own", () => {
+  const mine = take("m1", { attempt: undefined, tags: ["Lache"] });
+  const model = take("m22", {
+    memberId: "coach",
+    member: "",
+    attempt: undefined,
+    model: { title: "Clean rings", note: "" },
+  });
+  const maya = take("m333", { memberId: "maya", attempt: undefined });
+  assert.equal(partner(mine, [maya, model]).id, "m22");
+  // Ranked after the kid's own runs of the course, before other kids'.
+  assert.deepEqual(
+    candidates(mine, [maya, model, b]).map((t) => t.id),
+    ["bb", "m22", "m333"],
+  );
+  // On another course, a shared tag still finds it.
+  const elsewhere = { ...model, courseMap: null, tags: ["lache"] };
+  const off = take("m4444", {
+    courseMap: null,
+    attempt: undefined,
+    tags: ["Lache"],
+  });
+  assert.equal(partner(off, [other, elsewhere]).id, "m22");
+  assert.equal(takeLabel(model), "Model · Clean rings");
+  assert.equal(whose(model, "x"), "Model: Clean rings");
+  assert.equal(whose(maya, "x"), "Theo");
+});
+
+test("two cameras' takes of one recording line up at the same instant", () => {
+  const host = take("h", { sync: { group: "r1", start: 1_000_000 } });
+  const side = take("s", {
+    sync: { group: "r1", start: 1_000_350 },
+    angle: "Wall side",
+    angleOf: "h",
+  });
+  const elsewhere = take("x", { sync: { group: "r2", start: 1_000_000 } });
+  assert.equal(
+    partner(host, [b, slow, elsewhere, side]).id,
+    "s",
+    "the angle first",
+  );
+  const list = alignments(host, side);
+  const sync = list.find((x) => x.value === "sync");
+  // The side camera started 0.35s later: host 0.35s in matches side's 0s.
+  assert.ok(Math.abs(sync.a - 0.35) < 1e-9 && sync.b === 0);
+  assert.equal(defaultAlignment(list).value, "sync");
+  const back = alignments(side, host).find((x) => x.value === "sync");
+  assert.ok(back.a === 0 && Math.abs(back.b - 0.35) < 1e-9);
+  assert.ok(!alignments(host, elsewhere).some((x) => x.value === "sync"));
+  assert.equal(takeLabel(side), "Wall side · Theo");
 });

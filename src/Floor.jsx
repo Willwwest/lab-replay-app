@@ -1,11 +1,12 @@
 // The Floor: where a coach starts. Who's in the gym, tap who's up, then one
 // big Record. Today's recordings sit underneath.
-import React from "react";
-import { Camera, Inbox, Timer, Upload, UserPlus } from "lucide-react";
-import { Button, Card, Empty, Section } from "./ds/index.jsx";
+import React, { useState } from "react";
+import { Camera, Inbox, Timer, Upload, UserPlus, Video } from "lucide-react";
+import { Button, Card, Empty, Section, Tag } from "./ds/index.jsx";
 import { Masthead } from "./Shell.jsx";
 import { TakeCard } from "./Takes.jsx";
 import { firstName, initials } from "./format.js";
+import { needsKid } from "./workflow.js";
 
 const greeting = (h = new Date().getHours()) =>
   h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
@@ -20,9 +21,11 @@ export default function Floor({
   onUpNext,
   takes,
   jobs,
+  needs = [],
   onRecord,
   onTimed,
   onImport,
+  onBeAngle,
   onManageHere,
   onOpen,
   onAssign,
@@ -33,7 +36,7 @@ export default function Floor({
     .filter(Boolean);
   const up = members.find((m) => m.id === upNext);
   const today = takes.filter((t) => isToday(t.createdAt));
-  const toAssign = takes.filter((t) => !t.memberId).length;
+  const toAssign = takes.filter(needsKid).length;
   const date = new Date().toLocaleDateString(undefined, {
     weekday: "long",
     month: "long",
@@ -120,18 +123,29 @@ export default function Floor({
             </span>
           </button>
         )}
+        <NeedsYou needs={needs} upNext={upNext} onUpNext={onUpNext} />
         <Section
           title="Today"
           note="Recordings from today, newest first."
           actions={
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={Upload}
-              onClick={onImport}
-            >
-              Import a video
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Upload}
+                onClick={onImport}
+              >
+                Import a video
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Video}
+                onClick={onBeAngle}
+              >
+                Be a camera angle
+              </Button>
+            </>
           }
         >
           {today.length === 0 ? (
@@ -156,5 +170,56 @@ export default function Floor({
         </Section>
       </main>
     </>
+  );
+}
+
+// Kids who need a coach: a cue waiting for a retry, a course without a
+// clean run, here but not filmed, or not filmed for a while.
+const SHOWN = 5;
+function NeedsYou({ needs, upNext, onUpNext }) {
+  const [all, setAll] = useState(false);
+  if (!needs.length) return null;
+  const shown = all ? needs : needs.slice(0, SHOWN);
+  return (
+    <Section
+      title="Needs you"
+      note="From cues, course runs and who's here. Make one up next to film them."
+      actions={
+        needs.length > SHOWN && (
+          <Button variant="secondary" size="sm" onClick={() => setAll(!all)}>
+            {all ? "Show fewer" : `Show all ${needs.length}`}
+          </Button>
+        )
+      }
+    >
+      <ul className="rp-needs" aria-label="Needs you">
+        {shown.map((n) => (
+          <li key={n.memberId} className="rp-need">
+            <span className="avatar" aria-hidden="true">
+              {initials(n.name)}
+            </span>
+            <span className="rp-need-text">
+              <b>{n.name}</b>
+              <small>
+                {n.text}
+                {n.also > 0 && ` · and ${n.also} more`}
+              </small>
+              {n.here && <Tag tone="info">Here</Tag>}
+            </span>
+            <Button
+              size="sm"
+              variant={upNext === n.memberId ? "dark" : "secondary"}
+              aria-pressed={upNext === n.memberId}
+              aria-label={`Make ${n.name} up next`}
+              onClick={() =>
+                onUpNext(upNext === n.memberId ? null : n.memberId)
+              }
+            >
+              Up next
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Section>
   );
 }

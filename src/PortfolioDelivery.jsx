@@ -1,11 +1,13 @@
 // Renders the clip with the course map on the local service, then
 // publishes it to the member's portfolio in the LAB app (or withdraws it).
+// A voice-over recorded on this device can go with it.
 import React, { useState } from "react";
-import { Check, Circle, Send, Undo2, Wand2 } from "lucide-react";
-import { Button, Card, CardHead, Tag } from "./ds/index.jsx";
+import { Check, Circle, Eye, EyeOff, Send, Undo2, Wand2 } from "lucide-react";
+import { Button, Card, CardHead, Field, Select, Tag } from "./ds/index.jsx";
 import { api } from "./service.js";
 import { coursePNG } from "./CourseEditor.jsx";
-import { seconds } from "./format.js";
+import { day, seconds, stamp } from "./format.js";
+import { shared } from "./stills.js";
 import { analysisFor, steps } from "./workflow.js";
 
 const STATUS = {
@@ -20,12 +22,15 @@ export default function PortfolioDelivery({
   take,
   jobs,
   portfolio,
+  voices = [],
   connected,
   onCommit,
   onSay,
 }) {
-  const { review, setReview, error, setError, url } = portfolio;
+  const { review, setReview, error, setError, url, voiceUrl } = portfolio;
   const [busy, setBusy] = useState(false);
+  const [voiceId, setVoiceId] = useState("");
+  const voice = voices.find((v) => v.id === voiceId);
   const checks = steps(take, jobs, review).filter(
     (s) => s.id !== "portfolio" && !(s.optional && !s.done),
   );
@@ -40,11 +45,15 @@ export default function PortfolioDelivery({
       const job = analysisFor(jobs, saved.start, saved.end);
       const image = await coursePNG(saved.courseMap);
       const asset = await api("/assets", { method: "POST", body: saved.blob });
+      const voiceAsset = voice
+        ? await api("/assets", { method: "POST", body: voice.blob })
+        : null;
       const output = await api("/reviews", {
         method: "POST",
         body: JSON.stringify({
           submissionId: crypto.randomUUID(),
           assetId: asset.id,
+          voiceoverAssetId: voiceAsset?.id ?? null,
           memberId: saved.memberId,
           takeId: saved.id,
           start: saved.start,
@@ -56,9 +65,9 @@ export default function PortfolioDelivery({
           grade: saved.grade,
           notes: saved.notes,
           cue: saved.cue,
-          frames: saved.frames.filter(
-            (f) => f.time >= saved.start && f.time <= saved.end,
-          ),
+          frames: saved.frames
+            .filter((f) => f.time >= saved.start && f.time <= saved.end)
+            .map(shared),
           analysis: {
             id: job.id,
             status: job.status,
@@ -112,7 +121,7 @@ export default function PortfolioDelivery({
           </h3>
           <p className="ds-note">
             An MP4 of the clip with the course map in the corner, rendered on
-            the local service. Silent.
+            the local service. Silent; a voice-over goes beside it.
           </p>
         </div>
         <Tag tone={status?.tone ?? "outline"}>
@@ -155,6 +164,23 @@ export default function PortfolioDelivery({
           aria-label="Prepared portfolio clip"
         />
       )}
+      {voiceUrl && (
+        <figure className="rp-portfolio-voice">
+          <figcaption className="ds-note">
+            Voice-over · {stamp(review.voiceover.duration)}
+          </figcaption>
+          <video
+            className="rp-portfolio-video"
+            controls
+            playsInline
+            src={voiceUrl}
+            aria-label="Prepared voice-over"
+          />
+        </figure>
+      )}
+      {review?.views && ["published", "withdrawn"].includes(review.status) && (
+        <Watched views={review.views} />
+      )}
       {review && (
         <CardHead
           title={review.course.name}
@@ -162,6 +188,24 @@ export default function PortfolioDelivery({
         />
       )}
 
+      {voices.length > 0 && review?.status !== "rendering" && (
+        <Field
+          label="Voice-over"
+          hint="Sent with the next clip you prepare. The family hears your voice."
+        >
+          <Select
+            value={voiceId}
+            onChange={setVoiceId}
+            options={[
+              { value: "", label: "None" },
+              ...voices.map((v) => ({
+                value: v.id,
+                label: `${stamp(v.duration)} · ${day(v.createdAt)} ${new Date(v.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`,
+              })),
+            ]}
+          />
+        </Field>
+      )}
       <div className="rp-actions">
         <Button
           variant={review ? "secondary" : "dark"}
@@ -204,5 +248,25 @@ export default function PortfolioDelivery({
         )}
       </div>
     </Card>
+  );
+}
+
+// Who in the family has played the published clip, and when last.
+function Watched({ views }) {
+  if (!views.count)
+    return (
+      <p className="rp-portfolio-seen">
+        <EyeOff size={18} aria-hidden="true" />
+        Not watched by the family yet.
+      </p>
+    );
+  const last = new Date(views.last);
+  return (
+    <p className="rp-portfolio-seen is-seen">
+      <Eye size={18} aria-hidden="true" />
+      Watched {views.count === 1 ? "once" : `${views.count} times`} by{" "}
+      {views.names.join(" and ")}, last on {day(views.last)} at{" "}
+      {last.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.
+    </p>
   );
 }

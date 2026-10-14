@@ -17,9 +17,11 @@ import {
   createTeam,
   teamView,
 } from "./teams.js";
-import { threads, validateMessage } from "./messages.js";
+import { familySeenAt, threads, validateMessage } from "./messages.js";
+import { viewSummary } from "./views.js";
 import { findFont, timerFilters } from "./overlay.js";
 import { validateHere } from "./here.js";
+import * as angles from "./angles.js";
 const root = path.dirname(fileURLToPath(import.meta.url)),
   data = path.resolve(
     process.env.REPLAY_DATA_DIR || path.join(root, "../data"),
@@ -30,8 +32,61 @@ const roster = JSON.parse(
 );
 const db = new DatabaseSync(path.join(data, "replay.sqlite"));
 db.exec(
-  `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS assets(id TEXT PRIMARY KEY,owner TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,status TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS here(date TEXT NOT NULL,member TEXT NOT NULL,by TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(date,member)); CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,member TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reads(account TEXT NOT NULL,member TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(account,member)); CREATE TABLE IF NOT EXISTS teams(id TEXT PRIMARY KEY,code TEXT NOT NULL,status TEXT NOT NULL,updated INTEGER NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,course_key TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL);`,
+  `PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS assets(id TEXT PRIMARY KEY,owner TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reviews(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,status TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS here(date TEXT NOT NULL,member TEXT NOT NULL,by TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(date,member)); CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,member TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS reads(account TEXT NOT NULL,member TEXT NOT NULL,at TEXT NOT NULL,PRIMARY KEY(account,member)); CREATE TABLE IF NOT EXISTS teams(id TEXT PRIMARY KEY,code TEXT NOT NULL,status TEXT NOT NULL,updated INTEGER NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY,member TEXT NOT NULL,owner TEXT NOT NULL,course_key TEXT NOT NULL,created TEXT NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS angles(id TEXT PRIMARY KEY,code TEXT NOT NULL,status TEXT NOT NULL,updated INTEGER NOT NULL,body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS views(review TEXT NOT NULL,account TEXT NOT NULL,name TEXT NOT NULL,first TEXT NOT NULL,last TEXT NOT NULL,count INTEGER NOT NULL,PRIMARY KEY(review,account));`,
 );
+// A family member played a published clip. Guardians of one family share
+// an account, so each is counted by their own name within it.
+const markViewed = (review, account) => {
+  const at = new Date().toISOString();
+  const name = account.name ?? "Family";
+  db.prepare(
+    "INSERT INTO views VALUES(?,?,?,?,?,1) ON CONFLICT(review,account) DO UPDATE SET last=excluded.last,count=count+1",
+  ).run(review, `${reader(account)}:${name}`, name, at, at);
+};
+const viewsOf = (review) =>
+  viewSummary(db.prepare("SELECT * FROM views WHERE review=?").all(review));
+const getAngles = (key) => {
+  const row = db
+    .prepare(
+      "SELECT body FROM angles WHERE (id=? OR code=?) ORDER BY updated DESC",
+    )
+    .get(key, String(key).toUpperCase());
+  return row && JSON.parse(row.body);
+};
+const saveAngles = (s) =>
+  db
+    .prepare(
+      "INSERT INTO angles VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET status=excluded.status,updated=excluded.updated,body=excluded.body",
+    )
+    .run(s.id, s.code, s.status, s.updated, JSON.stringify(s));
+const clipFile = (id) => path.join(data, `angle-${id}.media`);
+// Streams a request body to a new file, up to `limit` bytes; returns its size.
+async function receive(req, target, limit = 250e6) {
+  let bytes = 0;
+  try {
+    await pipeline(
+      req,
+      new Transform({
+        transform(c, e, cb) {
+          bytes += c.length;
+          cb(
+            bytes > limit
+              ? Error(`Maximum video size is ${limit / 1e6} MB.`)
+              : null,
+            c,
+          );
+        },
+      }),
+      createWriteStream(target, { flags: "wx" }),
+    );
+    if (!bytes) throw Error("Empty recording.");
+    return bytes;
+  } catch (e) {
+    await unlink(target).catch(() => {});
+    throw e;
+  }
+}
+const readRows = () => db.prepare("SELECT account,member,at FROM reads").all();
 db.exec(`UPDATE reviews SET status='failed' WHERE status='rendering'`);
 const sessions = new Map();
 const allMessages = () =>
@@ -71,6 +126,7 @@ const allRuns = () =>
     .all()
     .map((r) => JSON.parse(r.body));
 let rendering = false;
+const VOICE_MAX = 600; // seconds of voice-over a review keeps
 const list = () =>
   db.prepare("SELECT * FROM reviews ORDER BY rowid DESC").all();
 const get = (id) => db.prepare("SELECT * FROM reviews WHERE id=?").get(id);
@@ -79,6 +135,11 @@ const result = (row) => ({
   id: row.id,
   status: row.status,
 });
+// A review as a coach sees it: with who in the family has watched it.
+const staffResult = (row, account) =>
+  account.kind === "staff"
+    ? { ...result(row), views: viewsOf(row.id) }
+    : result(row);
 const send = (res, status, value) => {
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -120,21 +181,59 @@ async function command(binary, args) {
     });
   });
 }
+const probe = async (file) =>
+  Number(
+    await command("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      file,
+    ]),
+  );
+// The coach's voice-over, as an H.264/AAC MP4 at the portfolio clip's size.
+// MediaRecorder files often carry no duration, so it's measured afterwards.
+async function renderVoice(id, assetId) {
+  const out = path.join(data, `${id}-voice.mp4`);
+  await command("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    path.join(data, `${assetId}.source`),
+    "-t",
+    String(VOICE_MAX),
+    "-vf",
+    "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    "23",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-movflags",
+    "+faststart",
+    out,
+  ]);
+  const duration = await probe(out);
+  if (!Number.isFinite(duration) || duration <= 0)
+    throw Error("The voice-over has no picture or sound to share.");
+  return { duration: Math.round(duration * 10) / 10 };
+}
 async function render(id, assetId, body) {
   rendering = true;
   try {
     const source = path.join(data, `${assetId}.source`);
-    const duration = Number(
-      await command("ffprobe", [
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        source,
-      ]),
-    );
+    const duration = await probe(source);
     if (!Number.isFinite(duration) || body.end > duration + 0.05)
       throw Error("Clip extends beyond the recording.");
     if (!/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(body.courseImage))
@@ -179,7 +278,14 @@ async function render(id, assetId, body) {
       "+faststart",
       path.join(data, `${id}.mp4`),
     ]);
-    db.prepare("UPDATE reviews SET status=? WHERE id=?").run("ready", id);
+    const done = body.voiceoverAssetId
+      ? { ...body, voiceover: await renderVoice(id, body.voiceoverAssetId) }
+      : body;
+    db.prepare("UPDATE reviews SET status=?,body=? WHERE id=?").run(
+      "ready",
+      JSON.stringify(done),
+      id,
+    );
   } catch (e) {
     db.prepare("UPDATE reviews SET status=?,body=? WHERE id=?").run(
       "failed",
@@ -188,8 +294,10 @@ async function render(id, assetId, body) {
     );
   } finally {
     rendering = false;
-    await unlink(path.join(data, `${assetId}.source`)).catch(() => {});
-    db.prepare("DELETE FROM assets WHERE id=?").run(assetId);
+    for (const a of [assetId, body.voiceoverAssetId].filter(Boolean)) {
+      await unlink(path.join(data, `${a}.source`)).catch(() => {});
+      db.prepare("DELETE FROM assets WHERE id=?").run(a);
+    }
   }
 }
 const server = http.createServer(async (req, res) => {
@@ -313,6 +421,16 @@ const server = http.createServer(async (req, res) => {
           memberId: member.id,
           name: member.name,
           messages: allMessages().filter((m) => m.memberId === member.id),
+          // Coaches see when the family last opened the thread.
+          ...(account.kind === "staff"
+            ? {
+                familySeenAt: familySeenAt(
+                  readRows(),
+                  roster.families,
+                  member.id,
+                ),
+              }
+            : {}),
         });
       }
       if (req.method === "POST") {
@@ -415,6 +533,107 @@ const server = http.createServer(async (req, res) => {
         return send(res, 200, teamView(account, next, allRuns()));
       }
     }
+    // Camera angles: other phones film the same run as the host phone.
+    if (route.startsWith("/angles")) {
+      if (account.kind !== "staff")
+        return send(res, 403, { error: "Coach access required." });
+      if (route === "/angles" && req.method === "POST") {
+        let s = angles.createSession(account);
+        while (getAngles(s.code)?.status === "open")
+          s = angles.createSession(account);
+        saveAngles(s);
+        return send(res, 201, angles.view(s));
+      }
+      const m = route.match(
+        /^\/angles\/([\w-]{1,80})(?:\/(join|leave|start|stop|discard|close|clips)(?:\/([\w-]{1,80}))?)?$/,
+      );
+      const s = m && getAngles(m[1]);
+      if (!s)
+        return send(res, 404, { error: "No camera session with that code." });
+      const [, , action, clipId] = m;
+      const put = (next, status = 200, extra = {}) => {
+        saveAngles(next);
+        return send(res, status, { ...angles.view(next), ...extra });
+      };
+      if (!action && req.method === "GET") {
+        const camera = url.searchParams.get("camera");
+        if (camera && s.cameras.some((c) => c.id === camera)) {
+          const next = angles.seen(s, camera);
+          saveAngles(next);
+          return send(res, 200, angles.view(next));
+        }
+        return send(res, 200, angles.view(s));
+      }
+      if (action === "clips" && req.method === "GET" && !clipId)
+        return send(
+          res,
+          200,
+          s.clips.filter(
+            (c) =>
+              !url.searchParams.get("recording") ||
+              c.recordingId === url.searchParams.get("recording"),
+          ),
+        );
+      if (action === "clips" && clipId) {
+        const clip = s.clips.find((c) => c.id === clipId);
+        if (!clip) return send(res, 404, { error: "No such clip." });
+        if (req.method === "GET") {
+          res.writeHead(200, {
+            "Content-Type": clip.type,
+            "Cache-Control": "no-store",
+          });
+          createReadStream(clipFile(clip.id))
+            .on("error", () => res.destroy())
+            .pipe(res);
+          return;
+        }
+        if (req.method === "DELETE") {
+          if (s.host.id !== account.id)
+            return send(res, 403, {
+              error: "Only the host phone takes clips.",
+            });
+          await unlink(clipFile(clip.id)).catch(() => {});
+          return put(angles.dropClip(s, clip.id));
+        }
+      }
+      if (action === "clips" && req.method === "POST") {
+        const query = Object.fromEntries(url.searchParams);
+        angles.clipFor(s, query, 1); // check before taking the upload
+        const id = randomUUID();
+        const size = await receive(req, clipFile(id));
+        try {
+          // Checked again: the host may have discarded it meanwhile.
+          const fresh = getAngles(s.id);
+          const clip = { ...angles.clipFor(fresh, query, size), id };
+          return put(angles.addClip(fresh, clip), 201, { clip });
+        } catch (e) {
+          await unlink(clipFile(id)).catch(() => {});
+          throw e;
+        }
+      }
+      if (req.method === "POST" && action) {
+        const body = await json(req).catch(() => ({}));
+        if (action === "join") {
+          const { session, camera } = angles.join(s, account, body);
+          return put(session, 200, { camera });
+        }
+        if (action === "leave") return put(angles.leave(s, body.camera));
+        if (action === "start") return put(angles.start(s, account, body));
+        if (action === "stop") return put(angles.stop(s, account, body));
+        if (action === "discard") {
+          const next = angles.discard(s, account, body.recordingId);
+          for (const c of s.clips.filter(
+            (c) => c.recordingId === body.recordingId,
+          ))
+            await unlink(clipFile(c.id)).catch(() => {});
+          return put(next);
+        }
+        if (action === "close") {
+          for (const c of s.clips) await unlink(clipFile(c.id)).catch(() => {});
+          return put({ ...angles.close(s, account), clips: [] });
+        }
+      }
+    }
     if (route === "/members" && req.method === "GET")
       return send(
         res,
@@ -438,30 +657,10 @@ const server = http.createServer(async (req, res) => {
     if (route === "/assets" && req.method === "POST") {
       if (account.kind !== "staff")
         return send(res, 403, { error: "Coach access required." });
-      const id = randomUUID(),
-        target = path.join(data, `${id}.source`);
-      let bytes = 0;
-      try {
-        await pipeline(
-          req,
-          new Transform({
-            transform(c, e, cb) {
-              bytes += c.length;
-              cb(
-                bytes > 250e6 ? Error("Maximum video size is 250 MB.") : null,
-                c,
-              );
-            },
-          }),
-          createWriteStream(target, { flags: "wx" }),
-        );
-        if (!bytes) throw Error("Empty recording.");
-        db.prepare("INSERT INTO assets VALUES(?,?)").run(id, account.id);
-        return send(res, 201, { id });
-      } catch (e) {
-        await unlink(target).catch(() => {});
-        throw e;
-      }
+      const id = randomUUID();
+      await receive(req, path.join(data, `${id}.source`));
+      db.prepare("INSERT INTO assets VALUES(?,?)").run(id, account.id);
+      return send(res, 201, { id });
     }
     if (route === "/reviews" && req.method === "POST") {
       if (account.kind !== "staff")
@@ -487,6 +686,19 @@ const server = http.createServer(async (req, res) => {
         return send(res, 403, {
           error: "Recording is not available to this coach.",
         });
+      if (body.voiceoverAssetId != null) {
+        const voice = db
+          .prepare("SELECT * FROM assets WHERE id=?")
+          .get(body.voiceoverAssetId);
+        if (
+          !voice ||
+          voice.owner !== account.id ||
+          body.voiceoverAssetId === body.assetId
+        )
+          return send(res, 403, {
+            error: "The voice-over is not available to this coach.",
+          });
+      }
       const id = randomUUID();
       const record = {
         ...body,
@@ -504,7 +716,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 202, result(get(id)));
     }
     const match = route.match(
-      /^\/reviews\/([a-f0-9-]+)(?:\/(publish|video|withdraw))?$/,
+      /^\/reviews\/([a-f0-9-]+)(?:\/(publish|video|voiceover|withdraw))?$/,
     );
     if (match) {
       const row = get(match[1]);
@@ -514,14 +726,23 @@ const server = http.createServer(async (req, res) => {
         (account.kind !== "staff" && row.status !== "published")
       )
         return send(res, 404, { error: "Review unavailable." });
-      if (match[2] === "video" && req.method === "GET") {
+      if (
+        (match[2] === "video" || match[2] === "voiceover") &&
+        req.method === "GET"
+      ) {
         if (!["ready", "published", "withdrawn"].includes(row.status))
           return send(res, 409, { error: "Video is not ready." });
+        const voice = match[2] === "voiceover";
+        if (voice && !JSON.parse(row.body).voiceover)
+          return send(res, 404, { error: "This review has no voice-over." });
+        if (!voice && account.kind === "guardian") markViewed(row.id, account);
         res.writeHead(200, {
           "Content-Type": "video/mp4",
           "Cache-Control": "no-store",
         });
-        createReadStream(path.join(data, `${row.id}.mp4`))
+        createReadStream(
+          path.join(data, `${row.id}${voice ? "-voice" : ""}.mp4`),
+        )
           .on("error", () => res.destroy())
           .pipe(res);
         return;
@@ -552,9 +773,10 @@ const server = http.createServer(async (req, res) => {
           JSON.stringify(body),
           row.id,
         );
-        return send(res, 200, result(get(row.id)));
+        return send(res, 200, staffResult(get(row.id), account));
       }
-      if (req.method === "GET") return send(res, 200, result(row));
+      if (req.method === "GET")
+        return send(res, 200, staffResult(row, account));
     }
     return send(res, 404, { error: "Not found." });
   } catch (e) {

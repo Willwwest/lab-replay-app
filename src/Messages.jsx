@@ -144,6 +144,12 @@ function Thread({ memberId, draftRun, onBack, onSent, onError }) {
   }
 
   const attached = runs.find((r) => r.id === runId);
+  // Under the latest coach message: whether the family has opened it.
+  const lastCoach = thread?.messages.findLast((m) => m.author.kind === "staff");
+  const seen =
+    lastCoach &&
+    thread.familySeenAt &&
+    thread.familySeenAt >= lastCoach.createdAt;
   return (
     <Card as="section" className="rp-thread" aria-label="Conversation">
       <header className="rp-thread-head">
@@ -175,6 +181,15 @@ function Thread({ memberId, draftRun, onBack, onSent, onError }) {
                 </span>
                 {m.text && <p>{m.text}</p>}
                 {m.run && <RunCard run={m.run} />}
+                {m === lastCoach && (
+                  <small
+                    className={`rp-msg-seen ${seen ? "is-seen" : ""}`.trim()}
+                  >
+                    {seen
+                      ? `Seen by the family · ${when(thread.familySeenAt)}`
+                      : "Not seen by the family yet"}
+                  </small>
+                )}
               </div>
               {coach && (
                 <IconButton

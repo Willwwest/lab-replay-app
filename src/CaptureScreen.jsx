@@ -2,7 +2,8 @@
 // button at the bottom. "Record" films with a running clock; "Timed course"
 // adds Pass / Fail / Skip for each obstacle. After each recording: keep it
 // or retake it, then pick the next kid and go again. The camera stays open
-// until the screen closes.
+// until the screen closes. With camera angles on, other phones in the
+// session film each recording too.
 import React, { useEffect, useRef, useState } from "react";
 import {
   Check,
@@ -11,6 +12,7 @@ import {
   Settings2,
   SkipForward,
   Undo2,
+  Video,
   X,
 } from "lucide-react";
 import {
@@ -74,6 +76,7 @@ export default function CaptureScreen({
   onClose,
   onOpenTake,
   team,
+  angles = null,
 }) {
   const [mode, setMode] = useState(team ? "course" : firstMode);
   const [courseId, setCourseId] = useState(firstCourse ?? courses[0]?.id ?? "");
@@ -150,6 +153,7 @@ export default function CaptureScreen({
           camera={camera}
           hud={hud}
           team={team}
+          angles={angles}
           best={kid && course ? bestFor(kid.id ?? kid.memberId, course) : null}
           onMode={setMode}
           onBusy={setBusy}
@@ -191,6 +195,7 @@ export default function CaptureScreen({
           onCourse={setCourseId}
           settings={settings}
           onSettings={onSettings}
+          angles={angles}
           onClose={() => setSheet(null)}
         />
       )}
@@ -209,6 +214,7 @@ function Shot({
   camera,
   hud,
   team,
+  angles,
   best,
   onMode,
   onBusy,
@@ -240,6 +246,19 @@ function Shot({
   const elapsed = () => (performance.now() - zero.current) / 1000;
   const onLive = team?.onLive ?? (() => {});
   const bestPace = pace(best);
+  // This recording on the other cameras: a promise of { id, startedAt }.
+  const rec = useRef(null);
+  const kept = useRef(false);
+  const host = useRef(angles);
+  host.current = angles;
+  // A recording the coach didn't keep is thrown away on every camera.
+  useEffect(
+    () => () => {
+      if (!kept.current)
+        rec.current?.then((r) => r && host.current?.discard(r.id));
+    },
+    [],
+  );
 
   useEffect(() => onBusy(phase !== "ready"), [phase]);
   useEffect(() => {
@@ -280,6 +299,13 @@ function Shot({
   function go() {
     zero.current = performance.now();
     camera.start();
+    if (angles?.code) {
+      const startedAt = angles.serverNow();
+      rec.current = angles
+        .start(kid, startedAt)
+        .then((r) => ({ id: r.id, startedAt }))
+        .catch(() => null);
+    }
     setFilming(true);
     cue("go", opts);
     onLive({ phase: "running", elapsed: 0, marks: [] });
@@ -325,6 +351,7 @@ function Shot({
         ? `${ENDINGS[run.ended.reason]} at ${seconds(run.ended.at)}.`
         : `Recorded ${seconds(run.ended.at)}.`,
     );
+    rec.current?.then((r) => r && host.current?.stop(r.id));
     camera.stop(camera.burned.current ? 1000 : 500).then((blob) => {
       setFilming(false);
       if (blob?.size) setVideo({ blob, url: URL.createObjectURL(blob) });
@@ -392,6 +419,7 @@ function Shot({
     try {
       const duration = await videoDuration(video.blob, run.ended.at);
       const takeId = crypto.randomUUID();
+      const sync = await rec.current;
       const attempt =
         timed && kid
           ? toAttempt(run, {
@@ -412,7 +440,13 @@ function Shot({
         blob: video.blob,
         duration,
         burned: camera.burned.current,
+        sync: sync && {
+          group: sync.id,
+          start: sync.startedAt,
+          code: angles.code,
+        },
       });
+      kept.current = true;
     } catch (e) {
       setError(e.message);
       setSaving(false);
@@ -593,6 +627,12 @@ function Shot({
                     ? `Tap to record ${firstName(kidName)}.`
                     : "Tap to record. Assign the kid later.")}
             </p>
+            {angles?.code && (
+              <p className="rp-cap-note rp-cap-angles">
+                <Video size={16} aria-hidden="true" />
+                {angleNote(angles.view)}
+              </p>
+            )}
           </>
         )}
 
@@ -801,6 +841,13 @@ function Saved({
 
 /* ---------- Settings ---------- */
 
+const angleNote = (view) => {
+  const on = view?.cameras.filter((c) => c.online).length ?? 0;
+  return on
+    ? `${on} other camera${on === 1 ? "" : "s"} will film this too`
+    : `Camera angles on, code ${view?.code}. No other camera has joined.`;
+};
+
 function CaptureSettings({
   mode,
   team,
@@ -809,8 +856,22 @@ function CaptureSettings({
   onCourse,
   settings,
   onSettings,
+  angles,
   onClose,
 }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const act = (fn) => async () => {
+    setBusy(true);
+    setError("");
+    try {
+      await fn();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
   const set = (k) => (v) => onSettings({ ...settings, [k]: v });
   const rules = settings.rules;
   return (
@@ -906,6 +967,63 @@ function CaptureSettings({
         label="Vibration"
         note="On phones that support it. iPhones don't."
       />
+      {angles && (
+        <section className="rp-angles-set" aria-label="Camera angles">
+          <span className="ds-field-label">Camera angles</span>
+          {!angles.shared ? (
+            <p className="rp-inline">Camera angles need the team service.</p>
+          ) : angles.code ? (
+            <>
+              <p className="rp-angles-code">
+                Code <b>{angles.code}</b>
+              </p>
+              <p className="ds-note">
+                On another phone, choose Be a camera angle on the Floor and
+                enter this code. It films whenever you do.
+              </p>
+              {angles.view?.cameras.length > 0 && (
+                <ul className="rp-angles-list" aria-label="Cameras joined">
+                  {angles.view.cameras.map((c) => (
+                    <li key={c.id}>
+                      <Tag tone={c.online ? "good" : "neutral"}>
+                        {c.online ? "Ready" : "Away"}
+                      </Tag>
+                      {c.label} · {c.coach}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={act(angles.close)}
+              >
+                End camera angles
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="ds-note">
+                Film the same run from other phones at once. Their clips come
+                back to this phone, lined up with yours.
+              </p>
+              <Button
+                variant="secondary"
+                icon={Video}
+                disabled={busy}
+                onClick={act(angles.open)}
+              >
+                Add camera angles
+              </Button>
+            </>
+          )}
+          {error && (
+            <p className="rp-inline is-error" role="alert">
+              {error}
+            </p>
+          )}
+        </section>
+      )}
     </Sheet>
   );
 }

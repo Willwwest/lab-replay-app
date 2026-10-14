@@ -16,10 +16,21 @@ self.onmessage = async ({ data }) => {
         baseOptions: {
           modelAssetPath: `${data.models}pose_landmarker_lite.task`,
         },
-        runningMode: "VIDEO",
+        // VIDEO for a clip's frames in order; IMAGE for one still.
+        runningMode: data.mode ?? "VIDEO",
         numPoses: 1,
       });
       self.postMessage({ type: "ready" });
+    } else if (data.type === "still") {
+      try {
+        const result = landmarker.detect(data.bitmap);
+        self.postMessage({
+          type: "still",
+          landmarks: result.landmarks[0] || [],
+        });
+      } finally {
+        data.bitmap.close();
+      }
     } else {
       try {
         const result = landmarker.detectForVideo(data.bitmap, data.time * 1000);

@@ -20,10 +20,10 @@ export function AppBar({ scrolled, nav, roster }) {
       <div className="appbar-inner">
         <a className="brand" href={`${BASE}#/floor`}>
           <img
-            src={asset("lab-white.svg")}
-            alt="The LAB — Learn. Adapt. Build."
+            className="rp-brand-lockup"
+            src={asset("lab-replay-white.svg")}
+            alt="LAB Replay"
           />
-          <span className="rp-brand-name">Replay</span>
         </a>
         <nav className="primary-nav" aria-label="Replay">
           {nav.map((n) => (

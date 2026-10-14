@@ -12,8 +12,15 @@ import {
 } from "./ds/index.jsx";
 import { seconds } from "./format.js";
 import { GRADES } from "./workflow.js";
+import TagField from "./TagField.jsx";
 
-export function CoachReview({ take, analysis, onChange, onExport }) {
+export function CoachReview({
+  take,
+  analysis,
+  suggestions,
+  onChange,
+  onExport,
+}) {
   const summary = analysis?.result?.summary;
   return (
     <Card as="section" aria-labelledby="rp-coach-title" className="rp-coach">
@@ -53,6 +60,11 @@ export function CoachReview({ take, analysis, onChange, onExport }) {
           placeholder="One clear cue or practice task."
         />
       </Field>
+      <TagField
+        tags={take.tags ?? []}
+        suggestions={suggestions}
+        onChange={(tags) => onChange({ tags })}
+      />
       {summary && (
         <Card tone="muted" pad="md" className="rp-tracking">
           <CardHead

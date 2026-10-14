@@ -4,9 +4,11 @@ import { courseKey } from "./attempts.js";
 import {
   analysisFor,
   attemptMatches,
+  needsKid,
   nextStep,
   portfolioBlockers,
   steps,
+  takeStatus,
 } from "./workflow.js";
 
 const map = {
@@ -121,4 +123,18 @@ test("a moved clip needs checking again; status reads in one word", async () => 
   );
   assert.equal(takeStatus(base, [done]).id, "analyzed");
   assert.equal(takeStatus({ ...base, portfolioId: "p" }, [done]).id, "shared");
+});
+
+test("a model clip needs no kid and says it's a model", () => {
+  const model = {
+    ...base,
+    memberId: "",
+    member: "",
+    model: { title: "Clean rings" },
+  };
+  assert.equal(needsKid(model), false);
+  assert.equal(needsKid({ ...model, model: null }), true);
+  assert.equal(takeStatus(model).label, "Model");
+  // A model that is also a kid's take follows the kid's workflow.
+  assert.equal(takeStatus({ ...base, model: { title: "x" } }).id, "check");
 });

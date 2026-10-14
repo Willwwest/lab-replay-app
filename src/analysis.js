@@ -1,5 +1,6 @@
 import { summarize } from "./domain.js";
 import { asset } from "./paths.js";
+import { loadImage } from "./stills.js";
 function waitEvent(target, event, signal) {
   return new Promise((resolve, reject) => {
     const done = () => {
@@ -29,6 +30,32 @@ function waitEvent(target, event, signal) {
     if (signal.aborted) abort();
   });
 }
+// One request to the pose worker and its one reply.
+function call(worker, message, transfer = [], signal) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => finish(new Error("Analysis timed out. Retry the clip.")),
+      90000,
+    );
+    const abort = () => finish(new DOMException("Cancelled", "AbortError"));
+    const finish = (error, result) => {
+      clearTimeout(timer);
+      worker.onmessage = null;
+      worker.onerror = null;
+      signal?.removeEventListener("abort", abort);
+      error ? reject(error) : resolve(result);
+    };
+    worker.onmessage = ({ data }) =>
+      data.type === "error"
+        ? finish(new Error(data.message))
+        : finish(null, data);
+    worker.onerror = (e) => finish(new Error(e.message));
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
+    else worker.postMessage(message, transfer);
+  });
+}
+
 export async function analyze(take, job, signal, onProgress) {
   const worker = new Worker(asset("processor.js"));
   const video = document.createElement("video");
@@ -37,33 +64,10 @@ export async function analyze(take, job, signal, onProgress) {
   video.preload = "auto";
   const url = URL.createObjectURL(take.blob);
   video.src = url;
-  function rpc(message, transfer = []) {
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(
-        () => finish(new Error("Analysis timed out. Retry the clip.")),
-        90000,
-      );
-      const abort = () => finish(new DOMException("Cancelled", "AbortError"));
-      const finish = (error, result) => {
-        clearTimeout(timer);
-        worker.onmessage = null;
-        worker.onerror = null;
-        signal.removeEventListener("abort", abort);
-        error ? reject(error) : resolve(result);
-      };
-      worker.onmessage = ({ data }) =>
-        data.type === "error"
-          ? finish(new Error(data.message))
-          : finish(null, data);
-      worker.onerror = (e) => finish(new Error(e.message));
-      signal.addEventListener("abort", abort, { once: true });
-      if (signal.aborted) abort();
-      else worker.postMessage(message, transfer);
-    });
-  }
+  const rpc = (message, transfer) => call(worker, message, transfer, signal);
   try {
     await waitEvent(video, "loadeddata", signal);
-    await rpc({ type: "init", models: asset("models/") });
+    await rpc({ type: "init", models: asset("models/"), mode: "VIDEO" });
     const samples = [],
       frames = [];
     const step = Math.max(0.5, (job.end - job.start) / 600);
@@ -111,4 +115,46 @@ export async function analyze(take, job, signal, onProgress) {
     video.load();
     URL.revokeObjectURL(url);
   }
+}
+
+// The body on one still, on this device, when a coach asks for it. One
+// worker serves every still in turn and closes after a minute unused.
+let still = null;
+let queue = Promise.resolve();
+let idle = 0;
+export function detectStill(image) {
+  const run = async () => {
+    clearTimeout(idle);
+    if (!still) {
+      const worker = new Worker(asset("processor.js"));
+      still = call(worker, {
+        type: "init",
+        models: asset("models/"),
+        mode: "IMAGE",
+      }).then(
+        () => worker,
+        (e) => {
+          worker.terminate();
+          still = null;
+          throw e;
+        },
+      );
+    }
+    const worker = await still;
+    try {
+      const bitmap = await createImageBitmap(await loadImage(image));
+      const { landmarks } = await call(worker, { type: "still", bitmap }, [
+        bitmap,
+      ]);
+      return landmarks;
+    } finally {
+      idle = setTimeout(() => {
+        worker.terminate();
+        still = null;
+      }, 60000);
+    }
+  };
+  const next = queue.then(run, run);
+  queue = next.catch(() => {});
+  return next;
 }

@@ -59,6 +59,13 @@ export function validateReview(body, members) {
       "Complete the coach assessment before preparing the portfolio.",
     );
   if (!body.cue?.trim()) throw Error("Add a next-attempt cue.");
+  if (
+    body.voiceoverAssetId != null &&
+    (typeof body.voiceoverAssetId !== "string" || !body.voiceoverAssetId)
+  )
+    throw Error("Invalid voice-over.");
+  // Only the service's own render says a review has a voice-over.
+  delete body.voiceover;
   if (body.attempt) {
     const a = body.attempt;
     if (

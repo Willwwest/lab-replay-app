@@ -1,7 +1,7 @@
 // LAB design system components. Pages compose these; they don't restyle them.
 // Rules live in DESIGN-SYSTEM.md; the style guide renders at ?ds.
-import React, { useId } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import React, { useEffect, useId, useRef } from "react";
+import { Check, ChevronDown, ExternalLink } from "lucide-react";
 import "./tokens.css";
 import "./components.css";
 
@@ -375,5 +375,143 @@ export function Chip({ on, onClick, disabled, children }) {
       {on && <Check size={14} aria-hidden="true" />}
       {children}
     </button>
+  );
+}
+
+/*
+ * A dropdown menu under a trigger, such as the account menu. Shows who is
+ * signed in, then groups of actions split by hairlines; a group may carry a
+ * small title ("Demo"). Render it only while open. It focuses the first
+ * item, moves with the arrow keys, Home and End, and closes on Escape or a
+ * press outside, returning focus to the trigger.
+ *
+ *   <Menu label="Account" anchor={triggerRef} onClose={close}
+ *     person={{ initials: "TR", name: "Travis", role: "Owner" }}
+ *     groups={[{ items: [{ label: "Gym map", onSelect }] },
+ *              { title: "Demo", items: [{ label: "Kiosk", href: "?kiosk", external: true }] }]} />
+ */
+export function Menu({
+  label,
+  person,
+  groups,
+  anchor,
+  onClose,
+  className,
+  autoFocus = true,
+}) {
+  const ref = useRef(null);
+  // The page re-renders on its clock; keep the latest onClose without
+  // re-running the effect (which would pull focus back to the first item).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    const items = () => [...ref.current.querySelectorAll("[role=menuitem]")];
+    if (autoFocus) items()[0]?.focus();
+    const close = (refocus) => {
+      closeRef.current();
+      if (refocus) anchor?.current?.focus();
+    };
+    const onKey = (e) => {
+      const list = items();
+      const i = list.indexOf(document.activeElement);
+      const go = {
+        ArrowDown: (i + 1) % list.length,
+        ArrowUp: (i - 1 + list.length) % list.length,
+        Home: 0,
+        End: list.length - 1,
+      }[e.key];
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close(true);
+      } else if (go !== undefined) {
+        e.preventDefault();
+        list[go]?.focus();
+      } else if (e.key === "Tab") close(false);
+    };
+    const onDown = (e) => {
+      if (
+        !ref.current?.contains(e.target) &&
+        !anchor?.current?.contains(e.target)
+      )
+        close(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [anchor]);
+  return (
+    <div
+      ref={ref}
+      className={cx("ds-menu", className)}
+      role="menu"
+      aria-label={label}
+    >
+      {person && (
+        <div className="ds-menu-person">
+          <span className="ds-menu-mark" aria-hidden="true">
+            {person.initials}
+          </span>
+          <span>
+            <strong>{person.name}</strong>
+            {person.role && <small>{person.role}</small>}
+          </span>
+        </div>
+      )}
+      {groups
+        .filter((g) => g.items.length)
+        .map((g, n) => (
+          <div
+            className="ds-menu-group"
+            role="group"
+            aria-label={g.title}
+            key={g.title ?? n}
+          >
+            {g.title && (
+              <span className="ds-menu-title" aria-hidden="true">
+                {g.title}
+              </span>
+            )}
+            {g.items.map((item) =>
+              item.href ? (
+                <a
+                  key={item.label}
+                  role="menuitem"
+                  tabIndex={-1}
+                  className="ds-menu-item"
+                  href={item.href}
+                  target={item.external ? "_blank" : undefined}
+                  rel={item.external ? "noreferrer" : undefined}
+                  onClick={onClose}
+                >
+                  {item.label}
+                  {item.external && (
+                    <ExternalLink size={14} aria-hidden="true" />
+                  )}
+                </a>
+              ) : (
+                <button
+                  key={item.label}
+                  type="button"
+                  role="menuitem"
+                  tabIndex={-1}
+                  className={cx(
+                    "ds-menu-item",
+                    item.tone === "danger" && "is-danger",
+                  )}
+                  onClick={() => {
+                    onClose();
+                    item.onSelect();
+                  }}
+                >
+                  {item.label}
+                </button>
+              ),
+            )}
+          </div>
+        ))}
+    </div>
   );
 }

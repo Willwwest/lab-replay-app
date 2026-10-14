@@ -2,9 +2,9 @@ let connection;
 async function db() {
   if (connection) return connection;
   connection = await new Promise((resolve, reject) => {
-    const r = indexedDB.open("lab-replay", 3);
+    const r = indexedDB.open("lab-replay", 4);
     r.onupgradeneeded = () => {
-      for (const name of ["takes", "jobs", "courses", "attempts"])
+      for (const name of ["takes", "jobs", "courses", "attempts", "voiceovers"])
         if (!r.result.objectStoreNames.contains(name))
           r.result.createObjectStore(name, { keyPath: "id" });
     };

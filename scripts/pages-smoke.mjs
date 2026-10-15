@@ -30,6 +30,8 @@ await h.step(
       const i = document.querySelector(".rp-gate-logo");
       return i?.complete && i.naturalWidth > 0;
     });
+    // Fonts load after the first paint over a real network.
+    await page.evaluate(() => document.fonts.ready);
     assert(
       await page.evaluate(() => document.fonts.check('800 40px "Argentum"')),
       "Argentum loaded",
